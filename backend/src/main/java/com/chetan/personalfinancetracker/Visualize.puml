@@ -1,0 +1,38 @@
+@startuml entity
+
+class User {
+    +Long id
+    +String username
+    +String password
+    +List<Category> categories
+}
+
+class Category {
+    +Long id
+    +String name
+    +String type
+    +User user
+    +List<Transaction> transactions
+}
+
+class Transaction {
+    +Long id
+    +Double amount
+    +String description
+    +Category category
+}
+
+class Expense {
+    +Long id
+    +Double amount
+    +String description
+    +Category category
+    +LocalDate date
+    +List<Expense> expenses
+}
+
+User "1" -- "many" Category : owns
+User "1" -- "many" Expense : owns
+Category "1" -- "many" Transaction : contains
+
+@enduml

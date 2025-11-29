@@ -1,0 +1,55 @@
+
+-- -- Categories
+-- INSERT INTO categories (id, name, type, monthly_budget, yearly_budget, user_id) VALUES (1, 'Food', 'EXPENSE', 5000, 60000, 1);
+-- INSERT INTO categories (id, name, type, monthly_budget, yearly_budget, user_id) VALUES (2, 'Salary', 'INCOME', NULL, NULL, 1);
+-- INSERT INTO categories (id, name, type, monthly_budget, yearly_budget, user_id) VALUES (3, 'Entertainment', 'EXPENSE', 2000, 24000, 1);
+-- INSERT INTO categories (id, name, type, monthly_budget, yearly_budget, user_id) VALUES (4, 'Transport', 'EXPENSE', 1500, 18000, 1);
+-- INSERT INTO categories (id, name, type, monthly_budget, yearly_budget, user_id) VALUES (5, 'Freelance', 'INCOME', NULL, NULL, 1);
+
+-- -- Transactions
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (1, 6646.59, 'Dining out', '2025-08-16', 1, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (2, 6007.7, 'Concert', '2025-08-13', 3, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (3, 5378.43, 'Taxi', '2025-08-27', 4, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (4, 3992.21, 'Side Gig Payment', '2025-08-20', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (5, 4262.29, 'Monthly Salary', '2025-08-29', 2, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (6, 5160.77, 'Side Gig Payment', '2025-08-14', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (7, 1666.95, 'Freelance Project A', '2025-08-01', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (8, 5621.47, 'Bus Fare', '2025-08-11', 4, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (9, 646.06, 'Side Gig Payment', '2025-08-02', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (10, 9832.16, 'Side Gig Payment', '2025-08-24', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (11, 3911.19, 'Monthly Salary', '2025-08-06', 2, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (12, 8314.92, 'Concert', '2025-08-19', 3, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (13, 6045.96, 'Movies', '2025-08-23', 3, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (14, 7865.26, 'Side Gig Payment', '2025-08-10', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (15, 1384.32, 'Monthly Salary', '2025-08-08', 2, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (16, 508.32, 'Freelance Project A', '2025-08-10', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (17, 3885.05, 'Freelance Project A', '2025-08-24', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (18, 2630.88, 'Snacks', '2025-08-19', 1, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (19, 9145.49, 'Monthly Salary', '2025-08-28', 2, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (20, 8374.29, 'Taxi', '2025-08-05', 4, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (21, 4907.56, 'Concert', '2025-08-13', 3, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (22, 3260.53, 'Concert', '2025-08-20', 3, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (23, 6212.67, 'Freelance Project A', '2025-08-13', 5, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (24, 1402.59, 'Streaming Subscription', '2025-08-02', 3, 1);
+-- INSERT INTO transactions (id, amount, description, date, category_id, user_id) VALUES (25, 1698.16, 'Monthly Salary', '2025-08-23', 2, 1);
+
+-- -- Categories: Mix of income and expense types
+-- INSERT INTO category (id, name, type, monthly_budget, yearly_budget, user_id) VALUES
+-- (1, 'Salary', 'INCOME', NULL, NULL, 1),
+-- (2, 'Freelance', 'INCOME', NULL, NULL, 1),
+-- (3, 'Groceries', 'EXPENSE', 500.00, 6000.00, 1),
+-- (4, 'Entertainment', 'EXPENSE', 200.00, 2400.00, 1),
+-- (5, 'Utilities', 'EXPENSE', 300.00, 3600.00, 1);
+
+-- -- Example for standalone expenses table
+-- INSERT INTO expense (id, amount, description, date, category_id, user_id) VALUES
+-- (1, 120.00, 'Grocery shopping at Walmart', '2025-08-01', 3, 1),
+-- (2, 80.00, 'Electricity bill', '2025-08-02', 5, 1),
+-- (3, 50.00, 'Movie night', '2025-08-04', 4, 1),
+-- (4, 200.00, 'Monthly groceries', '2025-08-10', 3, 1),
+-- (5, 60.00, 'Internet bill', '2025-08-12', 5, 1),
+-- (6, 100.00, 'Netflix and dinner', '2025-08-14', 4, 1),
+-- (7, 90.00, 'Grocery: Target', '2025-08-18', 3, 1),
+-- (8, 30.00, 'Water bill', '2025-08-20', 5, 1),
+-- (9, 75.00, 'Game night snacks', '2025-08-23', 4, 1),
+-- (10, 110.00, 'Grocery - Trader Joe, '2025-08-27', 3, 1);
