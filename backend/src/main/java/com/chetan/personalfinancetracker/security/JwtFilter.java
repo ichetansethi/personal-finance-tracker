@@ -3,6 +3,8 @@ package com.chetan.personalfinancetracker.security;
 import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,6 +19,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -36,8 +40,9 @@ public class JwtFilter extends OncePerRequestFilter {
             String jwt = authHeader.substring(7);
             String username = jwtUtil.extractUsername(jwt);
 
-            System.out.println(">>> Request URL: " + request.getRequestURI());
-            System.out.println(">>> Username from token: " + username);
+            if (log.isDebugEnabled()) {
+                log.debug("Processing authenticated request: {}", request.getRequestURI());
+            }
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
