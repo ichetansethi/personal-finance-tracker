@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.chetan.personalfinancetracker.dto.ExpenseDTO;
+import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.mapper.ExpenseMapper;
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.Expense;
@@ -43,7 +44,7 @@ public class ExpenseController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return expenseRepository.findByUserId(user.getId());
     }
 

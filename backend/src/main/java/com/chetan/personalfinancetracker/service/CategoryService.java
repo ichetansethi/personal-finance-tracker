@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.repository.CategoryRepository;
 
@@ -24,7 +25,7 @@ public class CategoryService {
 
     public Category findById(Long id) {
         return categoryRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Category not found with ID: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
     }
 
 }

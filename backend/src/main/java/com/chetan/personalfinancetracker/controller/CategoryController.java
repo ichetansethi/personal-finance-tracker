@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.chetan.personalfinancetracker.dto.CategoryDTO;
+import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.mapper.CategoryMapper;
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.User;
@@ -42,7 +43,7 @@ public class CategoryController {
     public ResponseEntity<CategoryDTO> createCategory(@RequestBody CategoryDTO dto, Principal principal) {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Category category = CategoryMapper.toEntity(dto, user);
         Category savedCategory = categoryService.createCategory(category);

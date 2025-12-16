@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.chetan.personalfinancetracker.dto.AuthRequest;
+import com.chetan.personalfinancetracker.exception.BadRequestException;
 import com.chetan.personalfinancetracker.model.User;
 import com.chetan.personalfinancetracker.repository.UserRepository;
 import com.chetan.personalfinancetracker.security.JwtUtil;
@@ -34,7 +35,7 @@ public class AuthService {
 
     public void register(AuthRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Username already exists");
+            throw new BadRequestException("Username already exists");
         }
 
         User user = new User();

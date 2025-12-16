@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.chetan.personalfinancetracker.dto.MonthlySummaryDTO;
 import com.chetan.personalfinancetracker.dto.TransactionDTO;
+import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.mapper.TransactionMapper;
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.Transaction;
@@ -43,9 +44,10 @@ public class TransactionController {
 
     @PostMapping
     public Transaction addTransaction(@RequestBody TransactionDTO dto, Principal principal) {
-        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        User user = userRepository.findByUsername(principal.getName())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Category category = categoryRepository.findById(dto.getCategoryId())
-            .orElseThrow(() -> new RuntimeException("Category not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         Transaction transaction = TransactionMapper.toEntity(dto, category, user);
         return transactionRepository.save(transaction);
@@ -53,7 +55,8 @@ public class TransactionController {
 
     @GetMapping
     public List<Transaction> getUserTransactions(Principal principal) {
-        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        User user = userRepository.findByUsername(principal.getName())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return transactionRepository.findByUser(user);
     }
 

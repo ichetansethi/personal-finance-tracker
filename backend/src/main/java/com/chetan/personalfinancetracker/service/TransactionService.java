@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import com.chetan.personalfinancetracker.dto.MonthlySummaryDTO;
 import com.chetan.personalfinancetracker.dto.MonthlySummaryDTO.BudgetAlert;
 import com.chetan.personalfinancetracker.dto.TransactionDTO;
+import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.mapper.TransactionMapper;
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.Transaction;
@@ -37,10 +38,10 @@ public class TransactionService {
     // Create a new transaction
     public TransactionDTO createTransaction(TransactionDTO dto) {
         Category category = categoryRepository.findById(dto.getCategoryId())
-            .orElseThrow(() -> new RuntimeException("Category not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         User user = userRepository.findById(dto.getUserId())
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Transaction transaction = TransactionMapper.toEntity(dto, category, user);
         Transaction saved = transactionRepository.save(transaction);
@@ -72,7 +73,7 @@ public class TransactionService {
     // Update an existing transaction
     public TransactionDTO updateTransaction(Long id, TransactionDTO dto) {
         Transaction existing = transactionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
         existing.setAmount(dto.getAmount());
         existing.setDescription(dto.getDescription());
