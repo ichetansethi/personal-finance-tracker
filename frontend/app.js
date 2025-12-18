@@ -1,5 +1,5 @@
-// API Configuration
-const API_BASE_URL = 'http://localhost:8080/api';
+// API Configuration - loaded from config.js
+const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8085/api';
 let currentUser = null;
 
 // Utility Functions

@@ -49,6 +49,7 @@
     <ul id="alertList"></ul>
   </div>
 
+  <script src="config.js"></script>
   <script>
   async function loadSummary() {
     const month = 8;
@@ -61,8 +62,9 @@
       return;
     }
 
+    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8085/api';
     const response = await fetch(
-      `http://localhost:8080/api/summary/monthly?month=${month}&year=${year}`,
+      `${apiBaseUrl}/summary/monthly?month=${month}&year=${year}`,
       {
         headers: {
           "Authorization": `Bearer ${TOKEN}`
