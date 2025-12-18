@@ -14,27 +14,62 @@
 
     <div id="errorMsg" class="alert alert-error"></div>
 
-    <div class="form-group">
-      <label class="form-label" for="username">Username</label>
-      <input type="text" id="username" class="form-input" placeholder="Enter your username" />
-    </div>
-
-    <div class="form-group">
-      <label class="form-label" for="password">Password</label>
-      <div class="password-wrapper">
-        <input type="password" id="password" class="form-input" placeholder="Enter your password" />
-        <button type="button" class="password-toggle" onclick="togglePassword()">
-          <svg id="eyeIcon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-          </svg>
-        </button>
+    <div id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input type="text" id="username" class="form-input" placeholder="Enter your username" onkeypress="handleLoginKeyPress(event)" />
       </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" class="form-input" placeholder="Enter your password" onkeypress="handleLoginKeyPress(event)" />
+          <button type="button" class="password-toggle" onclick="togglePassword()">
+            <svg id="eyeIcon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="width: 100%;" onclick="login()">
+        <span>Log in</span>
+      </button>
     </div>
 
-    <button class="btn btn-primary" style="width: 100%;" onclick="login()">
-      <span>Log in</span>
-    </button>
+    <div id="otpForm" style="display: none;">
+      <div class="otp-message">
+        <svg width="48" height="48" fill="none" stroke="#667eea" viewBox="0 0 24 24" style="margin: 0 auto 1rem; display: block;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+        </svg>
+        <p style="text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem;">
+          We've sent a verification code to your email. Please enter it below.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="otp">Verification Code</label>
+        <input
+          type="text"
+          id="otp"
+          class="form-input otp-input"
+          placeholder="Enter 6-digit code"
+          maxlength="6"
+          pattern="[0-9]{6}"
+          inputmode="numeric"
+          onkeypress="handleOtpKeyPress(event)"
+        />
+      </div>
+
+      <button class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;" onclick="verifyOtp()">
+        <span>Verify Code</span>
+      </button>
+
+      <button class="btn btn-secondary" style="width: 100%;" onclick="backToLogin()">
+        <span>Back to Login</span>
+      </button>
+    </div>
 
     <div class="auth-link">
       New here? <a href="register.html">Create an account</a>
@@ -56,13 +91,21 @@ function togglePassword() {
   }
 }
 
+let currentUsername = "";
+
 async function login() {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   const errorMsg = document.getElementById("errorMsg");
 
+  if (!username || !password) {
+    errorMsg.textContent = "❌ Please enter username and password";
+    errorMsg.style.display = "block";
+    return;
+  }
+
   errorMsg.style.display = "none";
-  errorMsg.textContent = ""; // clear previous errors
+  errorMsg.textContent = "";
 
   try {
     const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8085/api';
@@ -72,19 +115,85 @@ async function login() {
       body: JSON.stringify({ username, password })
     });
 
-    const text = await response.text(); // read raw text
-
+    const text = await response.text();
     console.log("Login status:", response.status);
     console.log("Login raw response:", text);
 
     if (!response.ok) {
-      // backend rejected (401 / 403 / 400 etc.)
       errorMsg.textContent = "❌ Invalid username or password";
       errorMsg.style.display = "block";
       return;
     }
 
-    // Try to parse as JSON { token: "..." }
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse JSON:", e);
+      errorMsg.textContent = "⚠️ Unexpected response from server";
+      errorMsg.style.display = "block";
+      return;
+    }
+
+    // Check if OTP is required
+    if (data.otpRequired === true) {
+      // OTP flow
+      currentUsername = username;
+      showOtpForm();
+      return;
+    }
+
+    // No OTP required, check for token
+    const token = data.token;
+    if (!token) {
+      console.error("No token field in response:", data);
+      errorMsg.textContent = "⚠️ No token received from server";
+      errorMsg.style.display = "block";
+      return;
+    }
+
+    // Save token & redirect
+    localStorage.setItem("jwtToken", token);
+    window.location.href = "index.html";
+
+  } catch (err) {
+    console.error("Network or CORS error:", err);
+    errorMsg.textContent = "⚠️ Could not reach server";
+    errorMsg.style.display = "block";
+  }
+}
+
+async function verifyOtp() {
+  const otp = document.getElementById("otp").value;
+  const errorMsg = document.getElementById("errorMsg");
+
+  if (!otp || otp.length !== 6) {
+    errorMsg.textContent = "❌ Please enter a valid 6-digit code";
+    errorMsg.style.display = "block";
+    return;
+  }
+
+  errorMsg.style.display = "none";
+  errorMsg.textContent = "";
+
+  try {
+    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8085/api';
+    const response = await fetch(`${apiBaseUrl}/auth/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: currentUsername, otp })
+    });
+
+    const text = await response.text();
+    console.log("OTP verification status:", response.status);
+    console.log("OTP verification response:", text);
+
+    if (!response.ok) {
+      errorMsg.textContent = "❌ Invalid or expired verification code";
+      errorMsg.style.display = "block";
+      return;
+    }
+
     let data;
     try {
       data = JSON.parse(text);
@@ -111,6 +220,34 @@ async function login() {
     console.error("Network or CORS error:", err);
     errorMsg.textContent = "⚠️ Could not reach server";
     errorMsg.style.display = "block";
+  }
+}
+
+function showOtpForm() {
+  document.getElementById("loginForm").style.display = "none";
+  document.getElementById("otpForm").style.display = "block";
+  document.getElementById("otp").focus();
+}
+
+function backToLogin() {
+  document.getElementById("loginForm").style.display = "block";
+  document.getElementById("otpForm").style.display = "none";
+  document.getElementById("otp").value = "";
+  document.getElementById("errorMsg").style.display = "none";
+  currentUsername = "";
+}
+
+function handleLoginKeyPress(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    login();
+  }
+}
+
+function handleOtpKeyPress(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    verifyOtp();
   }
 }
 </script>

@@ -1020,6 +1020,24 @@ body {
     border: 1px solid #e2e8f0;
 }
 
+/* OTP Input Styling */
+.otp-input {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.5rem;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.otp-input:focus {
+    letter-spacing: 0.5rem;
+}
+
+.otp-message {
+    margin-bottom: 1.5rem;
+    animation: slideDown 0.4s ease-out;
+}
+
 /* Utility Classes */
 .text-center {
     text-align: center;

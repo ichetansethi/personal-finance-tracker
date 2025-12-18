@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.chetan.personalfinancetracker.dto.AuthRequest;
+import com.chetan.personalfinancetracker.dto.OtpVerificationRequest;
 import com.chetan.personalfinancetracker.service.AuthService;
 
 @RestController
@@ -27,13 +28,32 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody AuthRequest request) {
-        String token = authService.login(request);
+    public ResponseEntity<Map<String, Object>> login(@RequestBody AuthRequest request) {
+        boolean otpRequired = authService.login(request);
+
+        Map<String, Object> body = new HashMap<>();
+
+        if (!otpRequired) {
+            // OTP is disabled, return token directly
+            String token = authService.generateTokenWithoutOtp(request.getUsername());
+            body.put("token", token);
+            body.put("otpRequired", false);
+        } else {
+            // OTP is enabled, OTP has been sent to email
+            body.put("otpRequired", true);
+            body.put("message", "OTP has been sent to your email");
+        }
+
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<Map<String, String>> verifyOtp(@RequestBody OtpVerificationRequest request) {
+        String token = authService.verifyOtpAndGenerateToken(request.getUsername(), request.getOtp());
 
         Map<String, String> body = new HashMap<>();
         body.put("token", token);
 
         return ResponseEntity.ok(body);
     }
-    
 }

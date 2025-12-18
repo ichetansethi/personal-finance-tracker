@@ -20,7 +20,6 @@ public class AuthService {
     @Autowired
     private UserRepository userRepository;
 
-
     @Autowired
     private AuthenticationManager authenticationManager;
 
@@ -29,9 +28,12 @@ public class AuthService {
 
     @Autowired
     private UserDetailsService userDetailsService;
-   
+
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private OtpService otpService;
 
     public void register(AuthRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
@@ -43,22 +45,48 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEmail(request.getEmail());
 
-        userRepository.save(user);  
+        userRepository.save(user);
     }
 
-    public String login(AuthRequest request) {
-        // Step 1: Authenticate
+    public boolean login(AuthRequest request) {
+        // Step 1: Authenticate credentials
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
                 request.getUsername(), request.getPassword()
             )
         );
 
-        // Step 2: Load user details
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+        // Step 2: Check if OTP is enabled
+        if (otpService.isOtpEnabled()) {
+            // Generate and send OTP
+            otpService.generateAndSendOtp(request.getUsername());
+            return false; // OTP required
+        } else {
+            // OTP disabled, return token directly
+            return true; // No OTP required
+        }
+    }
 
-        // Step 3: Generate and return JWT
+    public String verifyOtpAndGenerateToken(String username, String otp) {
+        // Verify OTP
+        boolean isValid = otpService.verifyOtp(username, otp);
+
+        if (!isValid) {
+            throw new BadRequestException("Invalid or expired OTP");
+        }
+
+        // Load user details
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        // Generate and return JWT
         return jwtUtil.generateToken(userDetails.getUsername());
     }
 
+    public String generateTokenWithoutOtp(String username) {
+        // Load user details
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        // Generate and return JWT
+        return jwtUtil.generateToken(userDetails.getUsername());
+    }
 }
