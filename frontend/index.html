@@ -3,62 +3,94 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Finance Dashboard</title>
+  <title>Dashboard | Finance Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      margin: 2rem;
-      background-color: #f4f4f4;
-    }
-    .summary {
-      display: flex;
-      justify-content: space-between;
-      background-color: #fff;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .alerts, .chart-container {
-      background-color: #fff;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .alert {
-      color: red;
-    }
-  </style>
 </head>
 <body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-brand">💰 Finance Tracker</a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Dashboard</a></li>
+        <li><a href="transactions.html">Transactions</a></li>
+        <li><a href="expenses.html">Expenses</a></li>
+        <li><a href="incomes.html">Incomes</a></li>
+        <li><a href="categories.html">Categories</a></li>
+        <li><a href="summary.html">Analytics</a></li>
+        <li><span id="userDisplay">User</span></li>
+        <li><button class="btn-logout" onclick="logout()">Logout</button></li>
+      </ul>
+    </div>
+  </nav>
 
-  <h2>📊 Personal Finance Dashboard</h2>
+  <div class="container">
+    <div class="page-header">
+      <h1 class="page-title">📊 Personal Finance Dashboard</h1>
+      <p class="page-subtitle">Track your income, expenses, and financial health at a glance</p>
+    </div>
 
-  <div class="summary">
-    <div>💰 <strong>Income:</strong> ₹<span id="income">0</span></div>
-    <div>💸 <strong>Expense:</strong> ₹<span id="expense">0</span></div>
-  </div>
+    <!-- Top stats -->
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-label">
+          <span class="stat-icon">💰</span>
+          Total Income
+        </div>
+        <div class="stat-value" id="income">₹0.00</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-label">
+          <span class="stat-icon">💸</span>
+          Total Expense
+        </div>
+        <div class="stat-value" id="expense">₹0.00</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="stat-label">
+          <span class="stat-icon">💵</span>
+          Net Balance
+        </div>
+        <div class="stat-value" id="netBalance">₹0.00</div>
+      </div>
+    </div>
 
-  <div class="chart-container">
-    <h3>Category-wise Expense</h3>
-    <canvas id="categoryChart"></canvas>
-  </div>
+    <!-- Chart + Alerts -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span>📈</span>
+          Category-wise Expense
+        </h2>
+      </div>
+      <div class="chart-container">
+        <canvas id="categoryChart"></canvas>
+      </div>
+    </div>
 
-  <div class="alerts">
-    <h3>⚠️ Budget Alerts</h3>
-    <ul id="alertList"></ul>
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <span>🔔</span>
+          Budget Alerts
+        </h2>
+      </div>
+      <div id="alertList" class="mt-1">
+        <div class="loading">Loading alerts...</div>
+      </div>
+    </div>
   </div>
 
   <script src="config.js"></script>
+  <script src="app.js"></script>
   <script>
   async function loadSummary() {
-    const month = 8;
-    const year = 2025;
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
 
-    const TOKEN = localStorage.getItem("jwtToken");
-
-    if (!TOKEN) {
-      window.location.href = "login.html";
+    if (!isAuthenticated()) {
+      redirectToLogin();
       return;
     }
 
@@ -66,47 +98,108 @@
     const response = await fetch(
       `${apiBaseUrl}/summary/monthly?month=${month}&year=${year}`,
       {
-        headers: {
-          "Authorization": `Bearer ${TOKEN}`
-        }
+        headers: getAuthHeaders()
       }
     );
 
     const data = await response.json();
 
-    // Set income/expense
-    document.getElementById('income').textContent = data.totalIncome.toFixed(2);
-    document.getElementById('expense').textContent = data.totalExpense.toFixed(2);
+    // Set income/expense/net with proper formatting
+    document.getElementById('income').textContent = '₹' + (data.totalIncome || 0).toFixed(2);
+    document.getElementById('expense').textContent = '₹' + (data.totalExpense || 0).toFixed(2);
+    const net = (data.totalIncome || 0) - (data.totalExpense || 0);
+    document.getElementById('netBalance').textContent = '₹' + net.toFixed(2);
 
     // Draw chart
     const ctx = document.getElementById('categoryChart').getContext('2d');
     new Chart(ctx, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: Object.keys(data.categorySummary),
         datasets: [{
           data: Object.values(data.categorySummary),
           backgroundColor: [
-            '#ff6384', '#36a2eb', '#cc65fe', '#ffce56', '#6ab04c', '#eb4d4b'
-          ]
+            '#667eea', '#22c55e', '#f97316', '#0ea5e9',
+            '#ec4899', '#a855f7', '#facc15', '#fb7185'
+          ],
+          borderWidth: 3,
+          borderColor: '#ffffff',
+          hoverOffset: 10
         }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 15,
+              font: {
+                size: 13,
+                weight: '500'
+              },
+              usePointStyle: true,
+              pointStyle: 'circle'
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: {
+              size: 14,
+              weight: 'bold'
+            },
+            bodyFont: {
+              size: 13
+            },
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                return label + ': ₹' + value.toFixed(2);
+              }
+            }
+          }
+        }
       }
     });
 
     // Alerts
-    const alertList = document.getElementById('alertList');
+    const alertContainer = document.getElementById('alertList');
+    alertContainer.innerHTML = '';
+
+    if (!data.budgetAlerts || data.budgetAlerts.length === 0) {
+      alertContainer.innerHTML = '<div class="empty-state">No budget alerts – you are on track 🎉</div>';
+      return;
+    }
+
     data.budgetAlerts.forEach(alert => {
-      const li = document.createElement('li');
-      li.textContent = `${alert.category} (${alert.period || "-"}) : 
-      ₹${alert.spent.toFixed(2)} / ₹${alert.budget ?? "No budget set"} 
-      — ${alert.exceeded ? '❗ Exceeded' : '✅ OK'}`;      
-      li.className = alert.exceeded ? 'alert' : '';
-      alertList.appendChild(li);
+      const wrapper = document.createElement('div');
+      wrapper.className = `alert-item ${alert.exceeded ? 'alert-exceeded' : 'alert-ok'}`;
+
+      wrapper.innerHTML = `
+        <div class="alert-content">
+          <div class="alert-category">${alert.category}</div>
+          <div class="alert-details">
+            Spent: ₹${alert.spent.toFixed(2)} /
+            Budget: ${alert.budget ? '₹' + alert.budget.toFixed(2) : 'Not set'}
+          </div>
+        </div>
+        <span class="badge ${alert.exceeded ? 'badge-danger' : 'badge-success'}">
+          ${alert.exceeded ? '⚠️ Exceeded' : '✅ OK'}
+        </span>
+      `;
+
+      alertContainer.appendChild(wrapper);
     });
   }
 
-  loadSummary();
-</script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initUser();
+    loadSummary();
+  });
+  </script>
 
 </body>
 </html>

@@ -27,14 +27,24 @@
         <div id="errorMessage" class="alert alert-error"></div>
         <div id="successMessage" class="alert alert-success"></div>
 
+        <div class="page-header">
+            <h1 class="page-title">🏷️ Categories</h1>
+            <p class="page-subtitle">Organize your finances with custom categories</p>
+        </div>
+
         <div class="card">
             <div class="card-header">
-                <h1 class="card-title">Categories</h1>
-                <button class="btn btn-primary" onclick="openAddCategoryModal()">+ Add Category</button>
+                <h2 class="card-title">
+                    <span>📂</span>
+                    Your Categories
+                </h2>
+                <button class="btn btn-primary" onclick="openAddCategoryModal()">
+                    <span>+ Add Category</span>
+                </button>
             </div>
 
             <!-- Categories Grid -->
-            <div id="categoriesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+            <div id="categoriesGrid" class="categories-grid">
                 <div class="loading">Loading...</div>
             </div>
         </div>
@@ -97,25 +107,33 @@
 
         function displayCategories(categories) {
             const grid = document.getElementById('categoriesGrid');
-            
+
             if (categories.length === 0) {
                 grid.innerHTML = '<div class="empty-state">No categories found. Add your first category!</div>';
                 return;
             }
 
             grid.innerHTML = categories.map(category => {
-                const typeBadge = category.type === 'INCOME' 
-                    ? '<span class="badge badge-success">Income</span>'
-                    : '<span class="badge badge-danger">Expense</span>';
-                
+                const typeBadge = category.type === 'INCOME'
+                    ? '<span class="badge badge-success">💰 Income</span>'
+                    : '<span class="badge badge-danger">💸 Expense</span>';
+
+                const icon = category.type === 'INCOME' ? '📈' : '💳';
+
                 return `
-                    <div class="card" style="margin: 0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <h3 style="margin: 0;">${category.name}</h3>
-                            ${typeBadge}
+                    <div class="category-card">
+                        <div class="category-header">
+                            <div class="category-icon">${icon}</div>
+                            <div class="category-info">
+                                <h3 class="category-name">${category.name}</h3>
+                                ${typeBadge}
+                            </div>
                         </div>
-                        ${category.monthlyBudget ? `<div style="font-size: 0.875rem; color: #64748b;">Monthly Budget: ${formatCurrency(category.monthlyBudget)}</div>` : ''}
-                        ${category.yearlyBudget ? `<div style="font-size: 0.875rem; color: #64748b;">Yearly Budget: ${formatCurrency(category.yearlyBudget)}</div>` : ''}
+                        <div class="category-budgets">
+                            ${category.monthlyBudget ? `<div class="budget-item">📅 Monthly: <strong>${formatCurrency(category.monthlyBudget)}</strong></div>` : ''}
+                            ${category.yearlyBudget ? `<div class="budget-item">📆 Yearly: <strong>${formatCurrency(category.yearlyBudget)}</strong></div>` : ''}
+                            ${!category.monthlyBudget && !category.yearlyBudget ? '<div class="budget-item">No budget set</div>' : ''}
+                        </div>
                     </div>
                 `;
             }).join('');

@@ -28,7 +28,10 @@
         <div id="errorMessage" class="alert alert-error"></div>
         <div id="successMessage" class="alert alert-success"></div>
 
-        <h1 style="margin-bottom: 2rem;">Analytics & Summary</h1>
+        <div class="page-header">
+            <h1 class="page-title">📊 Analytics & Summary</h1>
+            <p class="page-subtitle">Analyze your financial trends and insights</p>
+        </div>
 
         <!-- Date Selector -->
         <div class="card">
@@ -70,15 +73,24 @@
         <!-- Summary Stats -->
         <div class="stats-grid">
             <div class="stat-card income">
-                <div class="stat-label">Total Income</div>
+                <div class="stat-label">
+                    <span class="stat-icon">💰</span>
+                    Total Income
+                </div>
                 <div class="stat-value" id="totalIncome">₹0.00</div>
             </div>
             <div class="stat-card expense">
-                <div class="stat-label">Total Expense</div>
+                <div class="stat-label">
+                    <span class="stat-icon">💸</span>
+                    Total Expense
+                </div>
                 <div class="stat-value" id="totalExpense">₹0.00</div>
             </div>
             <div class="stat-card balance">
-                <div class="stat-label">Net Balance</div>
+                <div class="stat-label">
+                    <span class="stat-icon">💵</span>
+                    Net Balance
+                </div>
                 <div class="stat-value" id="netBalance">₹0.00</div>
             </div>
         </div>
@@ -86,7 +98,10 @@
         <!-- Charts -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Category-wise Breakdown</h2>
+                <h2 class="card-title">
+                    <span>📊</span>
+                    Category-wise Breakdown
+                </h2>
             </div>
             <div class="chart-container">
                 <canvas id="categoryChart"></canvas>
@@ -96,7 +111,10 @@
         <!-- Budget Alerts -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">Budget Alerts</h2>
+                <h2 class="card-title">
+                    <span>🔔</span>
+                    Budget Alerts
+                </h2>
             </div>
             <div id="budgetAlerts">
                 <div class="loading">Loading...</div>
@@ -188,7 +206,12 @@
                     datasets: [{
                         label: 'Amount',
                         data: data,
-                        backgroundColor: '#6366f1'
+                        backgroundColor: [
+                            '#667eea', '#22c55e', '#f97316', '#0ea5e9',
+                            '#ec4899', '#a855f7', '#facc15', '#fb7185'
+                        ],
+                        borderRadius: 8,
+                        borderWidth: 0
                     }]
                 },
                 options: {
@@ -197,11 +220,40 @@
                     plugins: {
                         legend: {
                             display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Amount: ₹' + context.parsed.y.toFixed(2);
+                                }
+                            }
                         }
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value.toFixed(0);
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
                         }
                     }
                 }
@@ -210,25 +262,24 @@
 
         function displayBudgetAlerts(alerts) {
             const container = document.getElementById('budgetAlerts');
-            
+
             if (alerts.length === 0) {
-                container.innerHTML = '<div class="empty-state">No budget alerts</div>';
+                container.innerHTML = '<div class="empty-state">No budget alerts – you are on track 🎉</div>';
                 return;
             }
 
             container.innerHTML = alerts.map(alert => `
-                <div style="padding: 1rem; margin-bottom: 0.5rem; border-radius: 0.5rem; background: ${alert.exceeded ? '#fee2e2' : '#f0fdf4'}; border-left: 4px solid ${alert.exceeded ? '#ef4444' : '#10b981'};">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>${alert.category}</strong>
-                            <div style="font-size: 0.875rem; color: #64748b; margin-top: 0.25rem;">
-                                Spent: ${formatCurrency(alert.spent || 0)} / Budget: ${alert.budget ? formatCurrency(alert.budget) : 'Not set'}
-                            </div>
+                <div class="alert-item ${alert.exceeded ? 'alert-exceeded' : 'alert-ok'}">
+                    <div class="alert-content">
+                        <div class="alert-category">${alert.category}</div>
+                        <div class="alert-details">
+                            Spent: ${formatCurrency(alert.spent || 0)} /
+                            Budget: ${alert.budget ? formatCurrency(alert.budget) : 'Not set'}
                         </div>
-                        <span class="badge ${alert.exceeded ? 'badge-danger' : 'badge-success'}">
-                            ${alert.exceeded ? '⚠️ Exceeded' : '✅ OK'}
-                        </span>
                     </div>
+                    <span class="badge ${alert.exceeded ? 'badge-danger' : 'badge-success'}">
+                        ${alert.exceeded ? '⚠️ Exceeded' : '✅ OK'}
+                    </span>
                 </div>
             `).join('');
         }
