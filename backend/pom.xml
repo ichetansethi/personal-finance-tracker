@@ -97,7 +97,13 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- MySQL Driver (commented out as you're using PostgreSQL) -->
+		<!-- Email Dependencies -->
+		<dependency>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+
+		<!-- MySQL Driver -->
 		<!-- 
 		<dependency>
 			<groupId>com.mysql</groupId>
