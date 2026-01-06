@@ -11,5 +11,5 @@
 const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8085/api';
 
 // Make it available globally
-window.API_BASE_URL = "https://tiny-phoenix-245ff1.netlify.app/api";
+window.API_BASE_URL = "https://personal-finance-tracker-nyez.onrender.com/api";
 
