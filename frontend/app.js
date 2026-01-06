@@ -1,5 +1,5 @@
 // API Configuration - loaded from config.js
-const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8085/api';
+const BASE_URL = window.API_BASE_URL || 'http://localhost:8085/api';
 let currentUser = null;
 
 // Utility Functions
@@ -28,7 +28,7 @@ function getAuthHeaders() {
 const api = {
     // Auth
     async register(username, password, email) {
-        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        const response = await fetch(`${BASE_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, email })
@@ -38,7 +38,7 @@ const api = {
     },
 
     async login(username, password) {
-        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        const response = await fetch(`${BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, email: '' })
@@ -53,7 +53,7 @@ const api = {
 
     // User
     async getCurrentUser() {
-        const response = await fetch(`${API_BASE_URL}/users/me`, {
+        const response = await fetch(`${BASE_URL}/users/me`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch user');
@@ -62,7 +62,7 @@ const api = {
 
     // Transactions
     async getTransactions() {
-        const response = await fetch(`${API_BASE_URL}/transactions`, {
+        const response = await fetch(`${BASE_URL}/transactions`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch transactions');
@@ -70,7 +70,7 @@ const api = {
     },
 
     async addTransaction(transaction) {
-        const response = await fetch(`${API_BASE_URL}/transactions`, {
+        const response = await fetch(`${BASE_URL}/transactions`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(transaction)
@@ -84,7 +84,7 @@ const api = {
         if (category) params.append('category', category);
         if (from) params.append('from', from);
         if (to) params.append('to', to);
-        const response = await fetch(`${API_BASE_URL}/transactions/filter?${params}`, {
+        const response = await fetch(`${BASE_URL}/transactions/filter?${params}`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to filter transactions');
@@ -93,7 +93,7 @@ const api = {
 
     // Expenses
     async getExpenses() {
-        const response = await fetch(`${API_BASE_URL}/expenses/my`, {
+        const response = await fetch(`${BASE_URL}/expenses/my`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch expenses');
@@ -101,7 +101,7 @@ const api = {
     },
 
     async addExpense(expense) {
-        const response = await fetch(`${API_BASE_URL}/expenses`, {
+        const response = await fetch(`${BASE_URL}/expenses`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(expense)
@@ -112,7 +112,7 @@ const api = {
 
     // Incomes
     async getIncomes(userId) {
-        const response = await fetch(`${API_BASE_URL}/incomes/user/${userId}`, {
+        const response = await fetch(`${BASE_URL}/incomes/user/${userId}`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch incomes');
@@ -120,7 +120,7 @@ const api = {
     },
 
     async addIncome(income) {
-        const response = await fetch(`${API_BASE_URL}/incomes`, {
+        const response = await fetch(`${BASE_URL}/incomes`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(income)
@@ -131,7 +131,7 @@ const api = {
 
     // Categories
     async getCategories() {
-        const response = await fetch(`${API_BASE_URL}/category`, {
+        const response = await fetch(`${BASE_URL}/category`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch categories');
@@ -139,7 +139,7 @@ const api = {
     },
 
     async addCategory(category) {
-        const response = await fetch(`${API_BASE_URL}/category`, {
+        const response = await fetch(`${BASE_URL}/category`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(category)
@@ -150,7 +150,7 @@ const api = {
 
     // Summary
     async getMonthlySummary(month, year) {
-        const response = await fetch(`${API_BASE_URL}/summary/monthly?month=${month}&year=${year}`, {
+        const response = await fetch(`${BASE_URL}/summary/monthly?month=${month}&year=${year}`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch summary');
@@ -158,7 +158,7 @@ const api = {
     },
 
     async getYearlySummary(year) {
-        const response = await fetch(`${API_BASE_URL}/summary/yearly?year=${year}`, {
+        const response = await fetch(`${BASE_URL}/summary/yearly?year=${year}`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch yearly summary');
@@ -166,7 +166,7 @@ const api = {
     },
 
     async getBudgetAlerts(userId, month, year) {
-        const response = await fetch(`${API_BASE_URL}/summary/budget-alerts?userId=${userId}&month=${month}&year=${year}`, {
+        const response = await fetch(`${BASE_URL}/summary/budget-alerts?userId=${userId}&month=${month}&year=${year}`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch budget alerts');
