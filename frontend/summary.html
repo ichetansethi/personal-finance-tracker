@@ -62,7 +62,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Year</label>
-                    <input type="number" id="yearSelect" class="form-input" value="2025" min="2020" max="2030">
+                    <input type="number" id="yearSelect" class="form-input" min="2020" max="2099">
                 </div>
                 <div class="form-group" style="display: flex; align-items: flex-end;">
                     <button class="btn btn-primary" onclick="loadSummary()">Load Summary</button>
@@ -126,7 +126,6 @@
     <script src="app.js"></script>
     <script>
         let categoryChart = null;
-        let currentUser = null;
 
         function toggleViewType() {
             const viewType = document.getElementById('viewType').value;
@@ -141,10 +140,6 @@
             }
 
             try {
-                if (!currentUser) {
-                    currentUser = await api.getCurrentUser();
-                }
-
                 const viewType = document.getElementById('viewType').value;
                 const year = parseInt(document.getElementById('yearSelect').value);
                 let summary;
@@ -167,7 +162,7 @@
                 // Load budget alerts
                 if (viewType === 'monthly') {
                     const month = parseInt(document.getElementById('monthSelect').value);
-                    const alerts = await api.getBudgetAlerts(currentUser.id, month, year);
+                    const alerts = await api.getBudgetAlerts(month, year);
                     displayBudgetAlerts(alerts);
                 } else {
                     document.getElementById('budgetAlerts').innerHTML = 
@@ -271,7 +266,7 @@
             container.innerHTML = alerts.map(alert => `
                 <div class="alert-item ${alert.exceeded ? 'alert-exceeded' : 'alert-ok'}">
                     <div class="alert-content">
-                        <div class="alert-category">${alert.category}</div>
+                        <div class="alert-category">${escapeHtml(alert.category)}</div>
                         <div class="alert-details">
                             Spent: ${formatCurrency(alert.spent || 0)} /
                             Budget: ${alert.budget ? formatCurrency(alert.budget) : 'Not set'}

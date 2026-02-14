@@ -2,7 +2,7 @@ package com.chetan.personalfinancetracker.service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.Random;
+import java.security.SecureRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,12 +104,13 @@ public class OtpService {
         return true;
     }
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private String generateOtpCode() {
-        Random random = new Random();
         StringBuilder otp = new StringBuilder();
 
         for (int i = 0; i < otpLength; i++) {
-            otp.append(random.nextInt(10));
+            otp.append(SECURE_RANDOM.nextInt(10));
         }
 
         return otp.toString();

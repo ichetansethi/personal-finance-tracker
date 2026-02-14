@@ -13,6 +13,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "users")
@@ -23,8 +25,12 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String username;
-    @Column(name = "email", nullable = false)
+    @Email(message = "Email must be valid")
+    @NotBlank(message = "Email is required")
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
+
+    @NotBlank(message = "Password is required")
     private String password; // stored encrypted
 
     // One user can have many transactions and categories
@@ -34,6 +40,12 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Category> categories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Expense> expenses = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Income> incomes = new ArrayList<>();
 
     public Long getId() {
         return id;

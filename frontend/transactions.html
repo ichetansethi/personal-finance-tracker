@@ -98,32 +98,32 @@
             </div>
             <form id="transactionForm" onsubmit="handleAddTransaction(event)">
                 <div class="form-group">
-                    <label class="form-label">Type</label>
+                    <label class="form-label" for="transactionType">Type</label>
                     <select id="transactionType" class="form-select" required>
                         <option value="INCOME">Income</option>
                         <option value="EXPENSE">Expense</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Amount</label>
+                    <label class="form-label" for="transactionAmount">Amount</label>
                     <input type="number" id="transactionAmount" class="form-input" step="0.01" min="0" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Description</label>
+                    <label class="form-label" for="transactionDescription">Description</label>
                     <input type="text" id="transactionDescription" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Category</label>
+                    <label class="form-label" for="transactionCategory">Category</label>
                     <select id="transactionCategory" class="form-select" required>
                         <option value="">Select Category</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Date</label>
+                    <label class="form-label" for="transactionDate">Date</label>
                     <input type="date" id="transactionDate" class="form-input" required>
                 </div>
                 <div style="display: flex; gap: 1rem;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Transaction</button>
+                    <button id="addTransactionBtn" type="submit" class="btn btn-primary" style="flex: 1;">Add Transaction</button>
                     <button type="button" class="btn btn-secondary" onclick="closeAddTransactionModal()" style="flex: 1;">Cancel</button>
                 </div>
             </form>
@@ -165,8 +165,8 @@
             const transactionCategory = document.getElementById('transactionCategory');
             const filterCategory = document.getElementById('filterCategory');
             
-            const categoryOptions = categories.map(cat => 
-                `<option value="${cat.id}">${cat.name}</option>`
+            const categoryOptions = categories.map(cat =>
+                `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`
             ).join('');
 
             transactionCategory.innerHTML = '<option value="">Select Category</option>' + categoryOptions;
@@ -182,16 +182,16 @@
             }
 
             tbody.innerHTML = transactions.map(transaction => {
-                const categoryName = transaction.category ? transaction.category.name : 'N/A';
-                const typeBadge = transaction.type === 'INCOME' 
+                const categoryName = transaction.category ? escapeHtml(transaction.category.name) : 'N/A';
+                const typeBadge = transaction.type === 'INCOME'
                     ? '<span class="badge badge-success">Income</span>'
                     : '<span class="badge badge-danger">Expense</span>';
-                
+
                 return `
                     <tr>
                         <td>${formatDate(transaction.date)}</td>
                         <td>${typeBadge}</td>
-                        <td>${transaction.description || 'N/A'}</td>
+                        <td>${escapeHtml(transaction.description) || 'N/A'}</td>
                         <td>${categoryName}</td>
                         <td><strong>${formatCurrency(transaction.amount || 0)}</strong></td>
                     </tr>
@@ -237,7 +237,8 @@
 
         async function handleAddTransaction(event) {
             event.preventDefault();
-            
+            const btn = document.getElementById('addTransactionBtn');
+
             const transaction = {
                 type: document.getElementById('transactionType').value,
                 amount: parseFloat(document.getElementById('transactionAmount').value),
@@ -246,14 +247,19 @@
                 date: document.getElementById('transactionDate').value
             };
 
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+
             try {
                 await api.addTransaction(transaction);
                 showSuccess('Transaction added successfully');
                 closeAddTransactionModal();
                 loadTransactions();
             } catch (error) {
-                console.error('Error adding transaction:', error);
                 showError('Failed to add transaction');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Add Transaction';
             }
         }
 

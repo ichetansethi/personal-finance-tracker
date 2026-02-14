@@ -12,8 +12,10 @@ public class ExpenseMapper {
         dto.setDescription(expense.getDescription());
         dto.setAmount(expense.getAmount());
         dto.setDate(expense.getDate());
-        dto.setCategoryId(expense.getId());
-        dto.setCategoryName(expense.getCategory().getName());
+        if (expense.getCategory() != null) {
+            dto.setCategoryId(expense.getCategory().getId());
+            dto.setCategoryName(expense.getCategory().getName());
+        }
         return dto;
     }
 
@@ -23,7 +25,7 @@ public class ExpenseMapper {
         expense.setDescription(dto.getDescription());
         expense.setAmount(dto.getAmount());
         expense.setDate(dto.getDate());
-        expense.setCategory(expense.getCategory());
+        expense.setCategory(category);
         return expense;
     }
 }

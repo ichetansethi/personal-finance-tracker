@@ -1,16 +1,31 @@
 package com.chetan.personalfinancetracker.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.Expense;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
 public class ExpenseDTO {
     private Long id;
+
+    @NotBlank(message = "Description is required")
     private String description;
-    private Double amount;
+
+    @NotNull(message = "Amount is required")
+    @Positive(message = "Amount must be positive")
+    private BigDecimal amount;
+
+    @NotNull(message = "Date is required")
     private LocalDate date;
+
+    @NotNull(message = "Category is required")
     private Long categoryId;
+
     private String categoryName;
     public Long getId() {
         return id;
@@ -24,10 +39,10 @@ public class ExpenseDTO {
     public void setDescription(String description) {
         this.description = description;
     }
-    public Double getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
-    public void setAmount(Double amount) {
+    public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
     public LocalDate getDate() {

@@ -75,25 +75,25 @@
             </div>
             <form id="incomeForm" onsubmit="handleAddIncome(event)">
                 <div class="form-group">
-                    <label class="form-label">Amount</label>
+                    <label class="form-label" for="incomeAmount">Amount</label>
                     <input type="number" id="incomeAmount" class="form-input" step="0.01" min="0" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Source</label>
+                    <label class="form-label" for="incomeSource">Source</label>
                     <input type="text" id="incomeSource" class="form-input" placeholder="e.g., Salary, Freelance" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Category</label>
+                    <label class="form-label" for="incomeCategory">Category</label>
                     <select id="incomeCategory" class="form-select" required>
                         <option value="">Select Category</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Date</label>
+                    <label class="form-label" for="incomeDate">Date</label>
                     <input type="date" id="incomeDate" class="form-input" required>
                 </div>
                 <div style="display: flex; gap: 1rem;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Income</button>
+                    <button id="addIncomeBtn" type="submit" class="btn btn-primary" style="flex: 1;">Add Income</button>
                     <button type="button" class="btn btn-secondary" onclick="closeAddIncomeModal()" style="flex: 1;">Cancel</button>
                 </div>
             </form>
@@ -104,7 +104,6 @@
     <script src="app.js"></script>
     <script>
         let categories = [];
-        let currentUser = null;
 
         async function loadIncomes() {
             if (!isAuthenticated()) {
@@ -113,10 +112,7 @@
             }
 
             try {
-                if (!currentUser) {
-                    currentUser = await api.getCurrentUser();
-                }
-                const incomes = await api.getIncomes(currentUser.id);
+                const incomes = await api.getIncomes();
                 displayIncomes(incomes);
             } catch (error) {
                 console.error('Error loading incomes:', error);
@@ -139,7 +135,7 @@
             const incomeCategory = document.getElementById('incomeCategory');
             const categoryOptions = categories
                 .filter(cat => cat.type === 'INCOME' || !cat.type)
-                .map(cat => `<option value="${cat.id}">${cat.name}</option>`)
+                .map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`)
                 .join('');
             incomeCategory.innerHTML = '<option value="">Select Category</option>' + categoryOptions;
         }
@@ -155,12 +151,11 @@
             const total = incomes.reduce((sum, inc) => sum + (inc.amount || 0), 0);
 
             tbody.innerHTML = incomes.map(income => {
-                // Income entity stores category as a String directly
-                const categoryName = income.category || 'N/A';
+                const categoryName = escapeHtml(income.category) || 'N/A';
                 return `
                     <tr>
                         <td>${formatDate(income.date)}</td>
-                        <td>${income.source || 'N/A'}</td>
+                        <td>${escapeHtml(income.source) || 'N/A'}</td>
                         <td>${categoryName}</td>
                         <td><strong>${formatCurrency(income.amount || 0)}</strong></td>
                     </tr>
@@ -185,7 +180,8 @@
 
         async function handleAddIncome(event) {
             event.preventDefault();
-            
+            const btn = document.getElementById('addIncomeBtn');
+
             const income = {
                 amount: parseFloat(document.getElementById('incomeAmount').value),
                 source: document.getElementById('incomeSource').value,
@@ -193,14 +189,19 @@
                 date: document.getElementById('incomeDate').value
             };
 
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+
             try {
                 await api.addIncome(income);
                 showSuccess('Income added successfully');
                 closeAddIncomeModal();
                 loadIncomes();
             } catch (error) {
-                console.error('Error adding income:', error);
                 showError('Failed to add income');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Add Income';
             }
         }
 

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.chetan.personalfinancetracker.dto.MonthlySummaryDTO;
 import com.chetan.personalfinancetracker.dto.TransactionDTO;
 import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
@@ -43,7 +45,7 @@ public class TransactionController {
     private CategoryRepository categoryRepository;
 
     @PostMapping
-    public Transaction addTransaction(@RequestBody TransactionDTO dto, Principal principal) {
+    public Transaction addTransaction(@Valid @RequestBody TransactionDTO dto, Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Category category = categoryRepository.findById(dto.getCategoryId())

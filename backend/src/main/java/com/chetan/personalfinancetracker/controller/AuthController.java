@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.chetan.personalfinancetracker.dto.AuthRequest;
 import com.chetan.personalfinancetracker.dto.OtpVerificationRequest;
 import com.chetan.personalfinancetracker.service.AuthService;
@@ -22,13 +24,13 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody AuthRequest request) {
+    public ResponseEntity<String> register(@Valid @RequestBody AuthRequest request) {
         authService.register(request);
         return ResponseEntity.ok("User registered successfully");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody AuthRequest request) {
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody AuthRequest request) {
         boolean otpRequired = authService.login(request);
 
         Map<String, Object> body = new HashMap<>();

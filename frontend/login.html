@@ -33,7 +33,7 @@
         </div>
       </div>
 
-      <button class="btn btn-primary" style="width: 100%;" onclick="login()">
+      <button id="loginBtn" class="btn btn-primary" style="width: 100%;" onclick="login()">
         <span>Log in</span>
       </button>
     </div>
@@ -62,7 +62,7 @@
         />
       </div>
 
-      <button class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;" onclick="verifyOtp()">
+      <button id="verifyOtpBtn" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;" onclick="verifyOtp()">
         <span>Verify Code</span>
       </button>
 
@@ -97,18 +97,21 @@ async function login() {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   const errorMsg = document.getElementById("errorMsg");
+  const loginBtn = document.getElementById("loginBtn");
 
   if (!username || !password) {
-    errorMsg.textContent = "❌ Please enter username and password";
+    errorMsg.textContent = "Please enter username and password";
     errorMsg.style.display = "block";
     return;
   }
 
   errorMsg.style.display = "none";
   errorMsg.textContent = "";
+  loginBtn.disabled = true;
+  loginBtn.innerHTML = "<span>Logging in...</span>";
 
   try {
-    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8085/api';
+    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8080/api';
     const response = await fetch(`${apiBaseUrl}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,11 +119,9 @@ async function login() {
     });
 
     const text = await response.text();
-    console.log("Login status:", response.status);
-    console.log("Login raw response:", text);
 
     if (!response.ok) {
-      errorMsg.textContent = "❌ Invalid username or password";
+      errorMsg.textContent = "Invalid username or password";
       errorMsg.style.display = "block";
       return;
     }
@@ -129,55 +130,54 @@ async function login() {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      console.error("Failed to parse JSON:", e);
-      errorMsg.textContent = "⚠️ Unexpected response from server";
+      errorMsg.textContent = "Unexpected response from server";
       errorMsg.style.display = "block";
       return;
     }
 
-    // Check if OTP is required
     if (data.otpRequired === true) {
-      // OTP flow
       currentUsername = username;
       showOtpForm();
       return;
     }
 
-    // No OTP required, check for token
     const token = data.token;
     if (!token) {
-      console.error("No token field in response:", data);
-      errorMsg.textContent = "⚠️ No token received from server";
+      errorMsg.textContent = "No token received from server";
       errorMsg.style.display = "block";
       return;
     }
 
-    // Save token & redirect
     localStorage.setItem("jwtToken", token);
     window.location.href = "index.html";
 
   } catch (err) {
-    console.error("Network or CORS error:", err);
-    errorMsg.textContent = "⚠️ Could not reach server";
+    errorMsg.textContent = "Could not reach server";
     errorMsg.style.display = "block";
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.innerHTML = "<span>Log in</span>";
   }
 }
 
 async function verifyOtp() {
   const otp = document.getElementById("otp").value;
   const errorMsg = document.getElementById("errorMsg");
+  const verifyBtn = document.getElementById("verifyOtpBtn");
 
   if (!otp || otp.length !== 6) {
-    errorMsg.textContent = "❌ Please enter a valid 6-digit code";
+    errorMsg.textContent = "Please enter a valid 6-digit code";
     errorMsg.style.display = "block";
     return;
   }
 
   errorMsg.style.display = "none";
   errorMsg.textContent = "";
+  verifyBtn.disabled = true;
+  verifyBtn.innerHTML = "<span>Verifying...</span>";
 
   try {
-    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8085/api';
+    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8080/api';
     const response = await fetch(`${apiBaseUrl}/auth/verify-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -185,11 +185,9 @@ async function verifyOtp() {
     });
 
     const text = await response.text();
-    console.log("OTP verification status:", response.status);
-    console.log("OTP verification response:", text);
 
     if (!response.ok) {
-      errorMsg.textContent = "❌ Invalid or expired verification code";
+      errorMsg.textContent = "Invalid or expired verification code";
       errorMsg.style.display = "block";
       return;
     }
@@ -198,28 +196,27 @@ async function verifyOtp() {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      console.error("Failed to parse JSON:", e);
-      errorMsg.textContent = "⚠️ Unexpected response from server";
+      errorMsg.textContent = "Unexpected response from server";
       errorMsg.style.display = "block";
       return;
     }
 
     const token = data.token;
     if (!token) {
-      console.error("No token field in response:", data);
-      errorMsg.textContent = "⚠️ No token received from server";
+      errorMsg.textContent = "No token received from server";
       errorMsg.style.display = "block";
       return;
     }
 
-    // Save token & redirect
     localStorage.setItem("jwtToken", token);
     window.location.href = "index.html";
 
   } catch (err) {
-    console.error("Network or CORS error:", err);
-    errorMsg.textContent = "⚠️ Could not reach server";
+    errorMsg.textContent = "Could not reach server";
     errorMsg.style.display = "block";
+  } finally {
+    verifyBtn.disabled = false;
+    verifyBtn.innerHTML = "<span>Verify Code</span>";
   }
 }
 

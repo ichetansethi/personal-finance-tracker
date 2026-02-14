@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.chetan.personalfinancetracker.dto.ExpenseDTO;
 import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.mapper.ExpenseMapper;
@@ -49,9 +51,15 @@ public class ExpenseController {
     }
 
     @PostMapping
-    public ResponseEntity<ExpenseDTO> createExpense(@RequestBody ExpenseDTO dto) {
+    public ResponseEntity<ExpenseDTO> createExpense(@Valid @RequestBody ExpenseDTO dto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
         Category category = categoryService.findById(dto.getCategoryId());
         Expense expense = ExpenseMapper.toEntity(dto, category);
+        expense.setUser(user);
         Expense saved = expenseService.createExpense(expense);
         return ResponseEntity.ok(ExpenseMapper.toDTO(saved));
     }

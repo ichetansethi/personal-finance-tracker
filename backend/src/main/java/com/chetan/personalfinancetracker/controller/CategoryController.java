@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.chetan.personalfinancetracker.dto.CategoryDTO;
 import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.mapper.CategoryMapper;
@@ -21,7 +23,7 @@ import com.chetan.personalfinancetracker.repository.UserRepository;
 import com.chetan.personalfinancetracker.service.CategoryService;
 
 @RestController
-@RequestMapping("/api/category")
+@RequestMapping("/api/categories")
 public class CategoryController {
 
     @Autowired
@@ -40,7 +42,7 @@ public class CategoryController {
     private UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<CategoryDTO> createCategory(@RequestBody CategoryDTO dto, Principal principal) {
+    public ResponseEntity<CategoryDTO> createCategory(@Valid @RequestBody CategoryDTO dto, Principal principal) {
         String username = principal.getName();
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));

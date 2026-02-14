@@ -5,15 +5,30 @@ import java.time.LocalDate;
 
 import com.chetan.personalfinancetracker.TransactionType;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
 public class TransactionDTO {
 
     private Long id;
+
+    @NotNull(message = "Amount is required")
+    @Positive(message = "Amount must be positive")
     private BigDecimal amount;
-    private TransactionType type; // INCOME or EXPENSE
+
+    @NotNull(message = "Transaction type is required")
+    private TransactionType type;
+
+    @NotNull(message = "Date is required")
     private LocalDate date;
+
+    @NotBlank(message = "Description is required")
     private String description;
 
+    @NotNull(message = "Category is required")
     private Long categoryId;
+
     private String categoryName;
 
     private Long userId;

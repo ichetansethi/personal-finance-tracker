@@ -94,15 +94,8 @@
       return;
     }
 
-    const apiBaseUrl = window.API_BASE_URL || 'http://localhost:8085/api';
-    const response = await fetch(
-      `${apiBaseUrl}/summary/monthly?month=${month}&year=${year}`,
-      {
-        headers: getAuthHeaders()
-      }
-    );
-
-    const data = await response.json();
+    try {
+    const data = await api.getMonthlySummary(month, year);
 
     // Set income/expense/net with proper formatting
     document.getElementById('income').textContent = '₹' + (data.totalIncome || 0).toFixed(2);
@@ -180,10 +173,10 @@
 
       wrapper.innerHTML = `
         <div class="alert-content">
-          <div class="alert-category">${alert.category}</div>
+          <div class="alert-category">${escapeHtml(alert.category)}</div>
           <div class="alert-details">
-            Spent: ₹${alert.spent.toFixed(2)} /
-            Budget: ${alert.budget ? '₹' + alert.budget.toFixed(2) : 'Not set'}
+            Spent: ${formatCurrency(alert.spent || 0)} /
+            Budget: ${alert.budget ? formatCurrency(alert.budget) : 'Not set'}
           </div>
         </div>
         <span class="badge ${alert.exceeded ? 'badge-danger' : 'badge-success'}">
@@ -193,6 +186,10 @@
 
       alertContainer.appendChild(wrapper);
     });
+
+    } catch (error) {
+      console.error('Error loading summary:', error);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {

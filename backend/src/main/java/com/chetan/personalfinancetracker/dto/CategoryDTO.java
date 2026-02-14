@@ -1,23 +1,33 @@
 package com.chetan.personalfinancetracker.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PositiveOrZero;
+
 public class CategoryDTO {
     private Long id;
+
+    @NotBlank(message = "Category name is required")
     private String name;
+
+    @NotBlank(message = "Category type is required")
     private String type;
 
     public CategoryDTO() {}
 
-    public CategoryDTO(Long id, String name, String type) {
+    public CategoryDTO(Long id, String name, Object type) {
         this.id = id;
         this.name = name;
-        this.type = type;
+        this.type = type != null ? type.toString() : null;
     }
 
     private Long userId;
 
     private Double budgetLimit;
 
+    @PositiveOrZero(message = "Monthly budget must be zero or positive")
     private Double monthlyBudget;
+
+    @PositiveOrZero(message = "Yearly budget must be zero or positive")
     private Double yearlyBudget;
 
     // Getters and Setters

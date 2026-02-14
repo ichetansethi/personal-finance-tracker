@@ -59,26 +59,26 @@
             </div>
             <form id="categoryForm" onsubmit="handleAddCategory(event)">
                 <div class="form-group">
-                    <label class="form-label">Name</label>
+                    <label class="form-label" for="categoryName">Name</label>
                     <input type="text" id="categoryName" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Type</label>
+                    <label class="form-label" for="categoryType">Type</label>
                     <select id="categoryType" class="form-select" required>
                         <option value="INCOME">Income</option>
                         <option value="EXPENSE">Expense</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Monthly Budget (Optional)</label>
+                    <label class="form-label" for="categoryMonthlyBudget">Monthly Budget (Optional)</label>
                     <input type="number" id="categoryMonthlyBudget" class="form-input" step="0.01" min="0">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Yearly Budget (Optional)</label>
+                    <label class="form-label" for="categoryYearlyBudget">Yearly Budget (Optional)</label>
                     <input type="number" id="categoryYearlyBudget" class="form-input" step="0.01" min="0">
                 </div>
                 <div style="display: flex; gap: 1rem;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Category</button>
+                    <button id="addCategoryBtn" type="submit" class="btn btn-primary" style="flex: 1;">Add Category</button>
                     <button type="button" class="btn btn-secondary" onclick="closeAddCategoryModal()" style="flex: 1;">Cancel</button>
                 </div>
             </form>
@@ -119,13 +119,14 @@
                     : '<span class="badge badge-danger">💸 Expense</span>';
 
                 const icon = category.type === 'INCOME' ? '📈' : '💳';
+                const safeName = escapeHtml(category.name);
 
                 return `
                     <div class="category-card">
                         <div class="category-header">
                             <div class="category-icon">${icon}</div>
                             <div class="category-info">
-                                <h3 class="category-name">${category.name}</h3>
+                                <h3 class="category-name">${safeName}</h3>
                                 ${typeBadge}
                             </div>
                         </div>
@@ -150,17 +151,21 @@
 
         async function handleAddCategory(event) {
             event.preventDefault();
-            
+            const btn = document.getElementById('addCategoryBtn');
+
             const category = {
                 name: document.getElementById('categoryName').value,
                 type: document.getElementById('categoryType').value,
-                monthlyBudget: document.getElementById('categoryMonthlyBudget').value 
-                    ? parseFloat(document.getElementById('categoryMonthlyBudget').value) 
+                monthlyBudget: document.getElementById('categoryMonthlyBudget').value
+                    ? parseFloat(document.getElementById('categoryMonthlyBudget').value)
                     : null,
-                yearlyBudget: document.getElementById('categoryYearlyBudget').value 
-                    ? parseFloat(document.getElementById('categoryYearlyBudget').value) 
+                yearlyBudget: document.getElementById('categoryYearlyBudget').value
+                    ? parseFloat(document.getElementById('categoryYearlyBudget').value)
                     : null
             };
+
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
 
             try {
                 await api.addCategory(category);
@@ -168,8 +173,10 @@
                 closeAddCategoryModal();
                 loadCategories();
             } catch (error) {
-                console.error('Error adding category:', error);
                 showError('Failed to add category');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Add Category';
             }
         }
 

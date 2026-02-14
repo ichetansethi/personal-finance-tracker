@@ -7,7 +7,11 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import com.chetan.personalfinancetracker.TransactionType;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -29,7 +33,8 @@ public class Category {
     @Column(name = "budget_limit")
     private Double budgetLimit;
 
-    private String type; // "INCOME" or "EXPENSE"
+    @Enumerated(EnumType.STRING)
+    private TransactionType type;
 
     @ManyToOne
     @JoinColumn(name = "user_id") // this should point to a user_id column in your DB
@@ -56,7 +61,7 @@ public class Category {
     // Constructors
     public Category() {}
 
-    public Category(String name, String type, User user) {
+    public Category(String name, TransactionType type, User user) {
         this.name = name;
         this.type = type;
         this.user = user;
@@ -71,7 +76,7 @@ public class Category {
         return name;
     }
 
-    public String getType() {
+    public TransactionType getType() {
         return type;
     }
 
@@ -87,7 +92,7 @@ public class Category {
         this.name = name;
     }
 
-    public void setType(String type) {
+    public void setType(TransactionType type) {
         this.type = type;
     }
 

@@ -1,5 +1,6 @@
 package com.chetan.personalfinancetracker.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import jakarta.persistence.Entity;
@@ -22,7 +23,7 @@ public class Income {
     private String source;
 
     @NotNull
-    private Double amount;
+    private BigDecimal amount;
 
     private String description;
 
@@ -40,8 +41,8 @@ public class Income {
         this.category = category;
     }
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     public Long getId() {
@@ -60,11 +61,11 @@ public class Income {
         this.source = source;
     }
 
-    public Double getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
 
-    public void setAmount(Double amount) {
+    public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
 

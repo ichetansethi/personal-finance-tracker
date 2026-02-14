@@ -75,25 +75,25 @@
             </div>
             <form id="expenseForm" onsubmit="handleAddExpense(event)">
                 <div class="form-group">
-                    <label class="form-label">Amount</label>
+                    <label class="form-label" for="expenseAmount">Amount</label>
                     <input type="number" id="expenseAmount" class="form-input" step="0.01" min="0" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Description</label>
+                    <label class="form-label" for="expenseDescription">Description</label>
                     <input type="text" id="expenseDescription" class="form-input" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Category</label>
+                    <label class="form-label" for="expenseCategory">Category</label>
                     <select id="expenseCategory" class="form-select" required>
                         <option value="">Select Category</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Date</label>
+                    <label class="form-label" for="expenseDate">Date</label>
                     <input type="date" id="expenseDate" class="form-input" required>
                 </div>
                 <div style="display: flex; gap: 1rem;">
-                    <button type="submit" class="btn btn-primary" style="flex: 1;">Add Expense</button>
+                    <button id="addExpenseBtn" type="submit" class="btn btn-primary" style="flex: 1;">Add Expense</button>
                     <button type="button" class="btn btn-secondary" onclick="closeAddExpenseModal()" style="flex: 1;">Cancel</button>
                 </div>
             </form>
@@ -135,7 +135,7 @@
             const expenseCategory = document.getElementById('expenseCategory');
             const categoryOptions = categories
                 .filter(cat => cat.type === 'EXPENSE' || !cat.type)
-                .map(cat => `<option value="${cat.id}">${cat.name}</option>`)
+                .map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`)
                 .join('');
             expenseCategory.innerHTML = '<option value="">Select Category</option>' + categoryOptions;
         }
@@ -151,12 +151,11 @@
             const total = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
 
             tbody.innerHTML = expenses.map(expense => {
-                // Expense entity has category as an object
-                const categoryName = expense.category ? (expense.category.name || expense.category) : 'N/A';
+                const categoryName = expense.category ? escapeHtml(expense.category.name || expense.category) : 'N/A';
                 return `
                     <tr>
                         <td>${formatDate(expense.date)}</td>
-                        <td>${expense.description || 'N/A'}</td>
+                        <td>${escapeHtml(expense.description) || 'N/A'}</td>
                         <td>${categoryName}</td>
                         <td><strong>${formatCurrency(expense.amount || 0)}</strong></td>
                     </tr>
@@ -181,7 +180,8 @@
 
         async function handleAddExpense(event) {
             event.preventDefault();
-            
+            const btn = document.getElementById('addExpenseBtn');
+
             const expense = {
                 amount: parseFloat(document.getElementById('expenseAmount').value),
                 description: document.getElementById('expenseDescription').value,
@@ -189,14 +189,19 @@
                 date: document.getElementById('expenseDate').value
             };
 
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+
             try {
                 await api.addExpense(expense);
                 showSuccess('Expense added successfully');
                 closeAddExpenseModal();
                 loadExpenses();
             } catch (error) {
-                console.error('Error adding expense:', error);
                 showError('Failed to add expense');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Add Expense';
             }
         }
 

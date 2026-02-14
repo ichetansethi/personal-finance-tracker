@@ -2,13 +2,36 @@
 const BASE_URL = window.API_BASE_URL || 'http://localhost:8085/api';
 let currentUser = null;
 
+// HTML Sanitization - prevents XSS when inserting user data into HTML
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Utility Functions
 function getAuthToken() {
     return localStorage.getItem('jwtToken');
 }
 
 function isAuthenticated() {
-    return !!getAuthToken();
+    const token = getAuthToken();
+    if (!token) return false;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+            localStorage.removeItem('jwtToken');
+            return false;
+        }
+        return true;
+    } catch (e) {
+        localStorage.removeItem('jwtToken');
+        return false;
+    }
 }
 
 function redirectToLogin() {
@@ -41,7 +64,7 @@ const api = {
         const response = await fetch(`${BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, email: '' })
+            body: JSON.stringify({ username, password })
         });
         if (!response.ok) {
             const errorText = await response.text();
@@ -111,8 +134,8 @@ const api = {
     },
 
     // Incomes
-    async getIncomes(userId) {
-        const response = await fetch(`${BASE_URL}/incomes/user/${userId}`, {
+    async getIncomes() {
+        const response = await fetch(`${BASE_URL}/incomes/user`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch incomes');
@@ -131,7 +154,7 @@ const api = {
 
     // Categories
     async getCategories() {
-        const response = await fetch(`${BASE_URL}/category`, {
+        const response = await fetch(`${BASE_URL}/categories`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch categories');
@@ -139,7 +162,7 @@ const api = {
     },
 
     async addCategory(category) {
-        const response = await fetch(`${BASE_URL}/category`, {
+        const response = await fetch(`${BASE_URL}/categories`, {
             method: 'POST',
             headers: getAuthHeaders(),
             body: JSON.stringify(category)
@@ -165,8 +188,8 @@ const api = {
         return response.json();
     },
 
-    async getBudgetAlerts(userId, month, year) {
-        const response = await fetch(`${BASE_URL}/summary/budget-alerts?userId=${userId}&month=${month}&year=${year}`, {
+    async getBudgetAlerts(month, year) {
+        const response = await fetch(`${BASE_URL}/summary/budget-alerts?month=${month}&year=${year}`, {
             headers: getAuthHeaders()
         });
         if (!response.ok) throw new Error('Failed to fetch budget alerts');

@@ -1,14 +1,17 @@
 package com.chetan.personalfinancetracker.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public class AuthRequest {
 
-    @NotBlank
+    @NotBlank(message = "Username is required")
     private String username;
-    @NotBlank
+
+    @NotBlank(message = "Password is required")
     private String password;
-    @NotBlank
+
+    @Email(message = "Email must be valid")
     private String email;
 
     public String getUsername() { return username; }

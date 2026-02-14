@@ -12,7 +12,6 @@ public class IncomeMapper {
         dto.setSource(income.getSource());
         dto.setAmount(income.getAmount());
         dto.setDate(income.getDate());
-        dto.setCategoryId(income.getId());
         dto.setCategoryName(income.getCategory());
         return dto;
     }
@@ -23,7 +22,7 @@ public class IncomeMapper {
         income.setSource(dto.getSource());
         income.setAmount(dto.getAmount());
         income.setDate(dto.getDate());
-        income.setCategory(income.getCategory());
+        income.setCategory(category != null ? category.getName() : null);
         return income;
     }
 }

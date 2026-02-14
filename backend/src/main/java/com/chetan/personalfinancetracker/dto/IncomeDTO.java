@@ -1,16 +1,29 @@
 package com.chetan.personalfinancetracker.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.Income;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
 public class IncomeDTO {
 
     private Long id;
+
+    @NotBlank(message = "Source is required")
     private String source;
-    private Double amount;
+
+    @NotNull(message = "Amount is required")
+    @Positive(message = "Amount must be positive")
+    private BigDecimal amount;
+
+    @NotNull(message = "Date is required")
     private LocalDate date;
+
     private Long categoryId;
     private String categoryName;
 
@@ -26,10 +39,10 @@ public class IncomeDTO {
     public void setSource(String source) {
         this.source = source;
     }
-    public Double getAmount() {
+    public BigDecimal getAmount() {
         return amount;
     }
-    public void setAmount(Double amount) {
+    public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
     public LocalDate getDate() {
