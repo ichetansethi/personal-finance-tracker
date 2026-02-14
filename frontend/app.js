@@ -1,5 +1,5 @@
 // API Configuration - loaded from config.js
-const BASE_URL = window.API_BASE_URL || 'http://localhost:8085/api';
+const BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api';
 let currentUser = null;
 
 // HTML Sanitization - prevents XSS when inserting user data into HTML

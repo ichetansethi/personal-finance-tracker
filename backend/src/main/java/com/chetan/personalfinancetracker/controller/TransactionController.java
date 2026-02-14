@@ -66,9 +66,10 @@ public class TransactionController {
     public List<TransactionDTO> getFilteredTransactions(
         @RequestParam(required = false) String category,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) 
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+        Principal principal)
         {
-        return transactionService.filterTransactions(category, from, to);
+        return transactionService.filterTransactions(principal.getName(), category, from, to);
     }
 
     @GetMapping("/summary")

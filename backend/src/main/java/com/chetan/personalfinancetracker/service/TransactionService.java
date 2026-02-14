@@ -57,9 +57,11 @@ public class TransactionService {
                 .toList();
     }
 
-    // Filter transactions by category and/or date range
-    public List<TransactionDTO> filterTransactions(String category, LocalDate from, LocalDate to) {
-        List<Transaction> filtered = transactionRepository.filter(category, from, to);
+    // Filter transactions by category and/or date range for a specific user
+    public List<TransactionDTO> filterTransactions(String username, String category, LocalDate from, LocalDate to) {
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        List<Transaction> filtered = transactionRepository.filter(user, category, from, to);
         return filtered.stream()
                 .map(TransactionMapper::toDTO)
                 .toList();

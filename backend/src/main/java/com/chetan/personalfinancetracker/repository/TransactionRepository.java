@@ -16,10 +16,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     
     List<Transaction> findByUser(User user);
     @Query("SELECT t FROM Transaction t WHERE " +
+       "t.user = :user AND " +
        "(:category IS NULL OR t.category.name = :category) AND " +
        "(:from IS NULL OR t.date >= :from) AND " +
        "(:to IS NULL OR t.date <= :to)")
-    List<Transaction> filter(@Param("category") String category,
+    List<Transaction> filter(@Param("user") User user,
+                            @Param("category") String category,
                             @Param("from") LocalDate from,
                             @Param("to") LocalDate to);
 
