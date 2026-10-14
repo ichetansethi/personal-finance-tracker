@@ -106,15 +106,15 @@ class JwtFilterTest {
     }
 
     @Test
-    void malformedTokenPropagatesTheParseException() throws Exception {
-        // extractUsername parses before validateToken, and the filter does not catch JwtException.
+    void malformedTokenDoesNotAuthenticateAndStillContinuesTheChain() throws Exception {
         when(jwtUtil.extractUsername("not-a-token")).thenThrow(new MalformedJwtException("bad"));
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer not-a-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-        assertThatThrownBy(() -> jwtFilter.doFilter(request, new MockHttpServletResponse(), chain))
-                .isInstanceOf(MalformedJwtException.class);
+        jwtFilter.doFilter(request, response, chain);
 
-        verify(chain, never()).doFilter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(chain).doFilter(request, response);
     }
 }

@@ -76,23 +76,32 @@ class TransactionRepositoryTest {
     }
 
     @Test
-    void monthlyTotalsAndCategorySpendIgnoreOtherMonths() {
-        assertThat(transactionRepository.getTotalIncomeForMonth(3, 2026)).isEqualTo(2000.0);
-        // The month total is not filtered by user, so Bob's 500 is included with Alice's 110.
-        assertThat(transactionRepository.getTotalExpenseForMonth(3, 2026)).isEqualTo(610.0);
-        assertThat(transactionRepository.getTotalIncomeForMonth(1, 2020)).isNull();
+    void totalsAndCategorySpendStayWithTheOwningUser() {
+        assertThat(transactionRepository.getTotalIncomeForMonth(alice.getId(), 3, 2026)).isEqualTo(2000.0);
+        assertThat(transactionRepository.getTotalExpenseForMonth(alice.getId(), 3, 2026)).isEqualTo(110.0);
+        assertThat(transactionRepository.getTotalExpenseForMonth(bob.getId(), 3, 2026)).isEqualTo(500.0);
+        assertThat(transactionRepository.getTotalIncomeForMonth(alice.getId(), 1, 2020)).isNull();
+        assertThat(transactionRepository.getTotalIncomeForYear(alice.getId(), 2026)).isEqualTo(2000.0);
+        assertThat(transactionRepository.getTotalExpenseForYear(alice.getId(), 2026)).isEqualTo(150.0);
 
-        assertThat(transactionRepository.getMonthlySpentForCategory(aliceFood.getId(), 3, 2026)).isEqualTo(110.0);
-        assertThat(transactionRepository.getYearlySpentForCategory(aliceFood.getId(), 2026)).isEqualTo(150.0);
-        assertThat(transactionRepository.getMonthlySpentForCategory(bobFood.getId(), 4, 2026)).isNull();
+        assertThat(transactionRepository.getMonthlySpentForCategory(alice.getId(), aliceFood.getId(), 3, 2026)).isEqualTo(110.0);
+        assertThat(transactionRepository.getYearlySpentForCategory(alice.getId(), aliceFood.getId(), 2026)).isEqualTo(150.0);
+        assertThat(transactionRepository.getMonthlySpentForCategory(bob.getId(), aliceFood.getId(), 3, 2026)).isNull();
 
-        Map<String, Double> march = new HashMap<>();
-        for (Object[] row : transactionRepository.getCategoryWiseTotals(3, 2026)) {
-            march.put((String) row[0], ((Number) row[1]).doubleValue());
+        Map<Long, Double> aliceMarch = totalsByCategoryId(transactionRepository.getCategoryWiseTotals(alice.getId(), 3, 2026));
+        assertThat(aliceMarch).containsEntry(aliceSalary.getId(), 2000.0).containsEntry(aliceFood.getId(), 110.0);
+        assertThat(aliceMarch).doesNotContainKey(bobFood.getId());
+
+        Map<Long, Double> aliceYear = totalsByCategoryId(transactionRepository.getCategoryWiseTotalsForYear(alice.getId(), 2026));
+        assertThat(aliceYear).containsEntry(aliceFood.getId(), 150.0);
+    }
+
+    private static Map<Long, Double> totalsByCategoryId(List<Object[]> rows) {
+        Map<Long, Double> totals = new HashMap<>();
+        for (Object[] row : rows) {
+            totals.put(((Number) row[0]).longValue(), ((Number) row[2]).doubleValue());
         }
-        assertThat(march.get("Salary")).isEqualTo(2000.0);
-        // Both users named their expense category "Food", and this query groups by name only.
-        assertThat(march.get("Food")).isEqualTo(610.0);
+        return totals;
     }
 
     private void save(User user, Category category, String amount, LocalDate date, String description) {

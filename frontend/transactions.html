@@ -182,7 +182,10 @@
             }
 
             tbody.innerHTML = transactions.map(transaction => {
-                const categoryName = transaction.category ? escapeHtml(transaction.category.name) : 'N/A';
+                const rawCategory = transaction.categoryName
+                    || (transaction.category && (transaction.category.name || transaction.category))
+                    || '';
+                const categoryName = rawCategory ? escapeHtml(rawCategory) : 'N/A';
                 const typeBadge = transaction.type === 'INCOME'
                     ? '<span class="badge badge-success">Income</span>'
                     : '<span class="badge badge-danger">Expense</span>';

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 import com.chetan.personalfinancetracker.dto.AuthRequest;
+import com.chetan.personalfinancetracker.dto.LoginRequest;
 import com.chetan.personalfinancetracker.dto.OtpVerificationRequest;
 import com.chetan.personalfinancetracker.service.AuthService;
 
@@ -30,7 +31,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody AuthRequest request) {
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
         boolean otpRequired = authService.login(request);
 
         Map<String, Object> body = new HashMap<>();

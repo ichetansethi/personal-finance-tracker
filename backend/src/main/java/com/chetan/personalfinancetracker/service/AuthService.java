@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.chetan.personalfinancetracker.dto.AuthRequest;
+import com.chetan.personalfinancetracker.dto.LoginRequest;
 import com.chetan.personalfinancetracker.exception.BadRequestException;
 import com.chetan.personalfinancetracker.model.User;
 import com.chetan.personalfinancetracker.repository.UserRepository;
@@ -36,8 +37,14 @@ public class AuthService {
     private OtpService otpService;
 
     public void register(AuthRequest request) {
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new BadRequestException("Email is required");
+        }
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new BadRequestException("Username already exists");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BadRequestException("Email already exists");
         }
 
         User user = new User();
@@ -48,7 +55,7 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    public boolean login(AuthRequest request) {
+    public boolean login(LoginRequest request) {
         // Step 1: Authenticate credentials
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
@@ -68,7 +75,10 @@ public class AuthService {
     }
 
     public String verifyOtpAndGenerateToken(String username, String otp) {
-        // Verify OTP
+        if (!otpService.isOtpEnabled()) {
+            throw new BadRequestException("OTP verification is disabled");
+        }
+
         boolean isValid = otpService.verifyOtp(username, otp);
 
         if (!isValid) {

@@ -17,6 +17,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.chetan.personalfinancetracker.dto.AuthRequest;
+import com.chetan.personalfinancetracker.dto.LoginRequest;
 import com.chetan.personalfinancetracker.exception.BadRequestException;
 import com.chetan.personalfinancetracker.model.User;
 import com.chetan.personalfinancetracker.repository.UserRepository;
@@ -82,8 +83,32 @@ class AuthServiceTest {
     }
 
     @Test
+    void registerRejectsAMissingEmail() {
+        AuthRequest request = request("alice", "plain-secret", " ");
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Email is required");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void registerRejectsADuplicateEmail() {
+        AuthRequest request = request("bob", "plain-secret", "alice@example.com");
+        when(userRepository.findByUsername("bob")).thenReturn(Optional.empty());
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Email already exists");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void loginReturnsFalseWhenCredentialsAreValidAndOtpIsDisabled() {
-        AuthRequest request = request("alice", "plain-secret", null);
+        LoginRequest request = credentials("alice", "plain-secret");
         when(otpService.isOtpEnabled()).thenReturn(false);
 
         boolean otpRequired = authService.login(request);
@@ -95,7 +120,7 @@ class AuthServiceTest {
 
     @Test
     void loginSendsOtpAndReturnsTrueWhenOtpIsEnabled() {
-        AuthRequest request = request("alice", "plain-secret", null);
+        LoginRequest request = credentials("alice", "plain-secret");
         when(otpService.isOtpEnabled()).thenReturn(true);
 
         boolean otpRequired = authService.login(request);
@@ -106,7 +131,7 @@ class AuthServiceTest {
 
     @Test
     void loginDoesNotSendOtpWhenCredentialsAreRejected() {
-        AuthRequest request = request("alice", "wrong", null);
+        LoginRequest request = credentials("alice", "wrong");
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("bad credentials"));
 
@@ -121,6 +146,7 @@ class AuthServiceTest {
     void verifyOtpIssuesTokenForTheLoadedAccount() {
         UserDetails details = org.springframework.security.core.userdetails.User
                 .withUsername("alice").password("hash").roles("USER").build();
+        when(otpService.isOtpEnabled()).thenReturn(true);
         when(otpService.verifyOtp("alice", "123456")).thenReturn(true);
         when(userDetailsService.loadUserByUsername("alice")).thenReturn(details);
         when(jwtUtil.generateToken("alice")).thenReturn("signed-token");
@@ -130,12 +156,25 @@ class AuthServiceTest {
 
     @Test
     void verifyOtpRejectsInvalidOrExpiredCode() {
+        when(otpService.isOtpEnabled()).thenReturn(true);
         when(otpService.verifyOtp("alice", "000000")).thenReturn(false);
 
         assertThatThrownBy(() -> authService.verifyOtpAndGenerateToken("alice", "000000"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Invalid or expired OTP");
 
+        verify(jwtUtil, never()).generateToken(any());
+    }
+
+    @Test
+    void verifyOtpDoesNotIssueATokenWhenOtpIsDisabled() {
+        when(otpService.isOtpEnabled()).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.verifyOtpAndGenerateToken("alice", "000000"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("OTP verification is disabled");
+
+        verify(otpService, never()).verifyOtp(any(), any());
         verify(jwtUtil, never()).generateToken(any());
     }
 
@@ -158,6 +197,13 @@ class AuthServiceTest {
                 .isInstanceOf(UsernameNotFoundException.class);
 
         verify(jwtUtil, never()).generateToken(any());
+    }
+
+    private static LoginRequest credentials(String username, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUsername(username);
+        request.setPassword(password);
+        return request;
     }
 
     private static AuthRequest request(String username, String password, String email) {

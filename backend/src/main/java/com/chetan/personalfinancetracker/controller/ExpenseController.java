@@ -1,6 +1,7 @@
 package com.chetan.personalfinancetracker.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -42,12 +43,14 @@ public class ExpenseController {
     private UserRepository userRepository;
 
     @GetMapping("/my")
-    public List<Expense> getMyExpenses() {
+    public List<ExpenseDTO> getMyExpenses() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        return expenseRepository.findByUserId(user.getId());
+        return expenseRepository.findByUserId(user.getId()).stream()
+            .map(ExpenseMapper::toDTO)
+            .collect(Collectors.toList());
     }
 
     @PostMapping
@@ -57,7 +60,7 @@ public class ExpenseController {
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Category category = categoryService.findById(dto.getCategoryId());
+        Category category = categoryService.findOwnedCategory(dto.getCategoryId(), user.getId());
         Expense expense = ExpenseMapper.toEntity(dto, category);
         expense.setUser(user);
         Expense saved = expenseService.createExpense(expense);

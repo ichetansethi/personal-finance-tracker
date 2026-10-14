@@ -15,8 +15,8 @@ public class CategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
 
-    public List<Category> getAllCategories() {
-        return categoryRepository.findAll();
+    public List<Category> getCategoriesForUser(Long userId) {
+        return categoryRepository.findByUserId(userId);
     }
 
     public Category createCategory(Category category) {
@@ -26,6 +26,12 @@ public class CategoryService {
     public Category findById(Long id) {
         return categoryRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + id));
+    }
+
+    public Category findOwnedCategory(Long categoryId, Long userId) {
+        return categoryRepository.findById(categoryId)
+            .filter(category -> category.getUser() != null && userId != null && userId.equals(category.getUser().getId()))
+            .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
     }
 
 }

@@ -28,6 +28,9 @@ import com.chetan.personalfinancetracker.security.JwtUtil;
 import com.chetan.personalfinancetracker.service.TransactionService;
 import com.chetan.personalfinancetracker.support.WebTestAuth;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -64,7 +67,8 @@ class SummaryControllerTest {
     @Test
     void anonymousCallersCannotReadBudgetAlerts() throws Exception {
         mockMvc.perform(get("/api/summary/budget-alerts").param("month", "3").param("year", "2026"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
@@ -92,7 +96,8 @@ class SummaryControllerTest {
 
     @Test
     void monthlySummaryReturnsTheServicePayload() throws Exception {
-        when(transactionService.getMonthlySummary(3, 2026))
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(9L)));
+        when(transactionService.getMonthlySummary(9L, 3, 2026))
                 .thenReturn(new MonthlySummaryDTO(500, 125, Map.of("Rent", 125.0), List.of()));
 
         mockMvc.perform(get("/api/summary/monthly")
@@ -102,20 +107,50 @@ class SummaryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIncome").value(500.0))
                 .andExpect(jsonPath("$.netBalance").value(375.0));
+
+        verify(transactionService).getMonthlySummary(9L, 3, 2026);
     }
 
     @Test
-    void yearlySummaryDelegatesWithMonthZero() throws Exception {
-        // The yearly endpoint currently reuses the monthly query with month 0.
-        when(transactionService.getMonthlySummary(0, 2026))
-                .thenReturn(new MonthlySummaryDTO(0, 0, Map.of(), List.of()));
+    void yearlySummaryUsesTheYearlyQueryForTheCaller() throws Exception {
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(9L)));
+        when(transactionService.getYearlySummary(9L, 2026))
+                .thenReturn(new MonthlySummaryDTO(800, 200, Map.of("Rent", 200.0), List.of()));
 
         mockMvc.perform(get("/api/summary/yearly")
                         .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice"))
                         .param("year", "2026"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalIncome").value(0.0));
+                .andExpect(jsonPath("$.totalIncome").value(800.0))
+                .andExpect(jsonPath("$.totalExpense").value(200.0));
 
-        verify(transactionService).getMonthlySummary(0, 2026);
+        verify(transactionService).getYearlySummary(9L, 2026);
+        verify(transactionService, never()).getMonthlySummary(any(), anyInt(), anyInt());
+    }
+
+    @Test
+    void missingMonthIsABadRequest() throws Exception {
+        mockMvc.perform(get("/api/summary/monthly")
+                        .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice"))
+                        .param("year", "2026"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("month is required"));
+    }
+
+    @Test
+    void nonNumericMonthIsABadRequest() throws Exception {
+        mockMvc.perform(get("/api/summary/monthly")
+                        .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice"))
+                        .param("month", "abc")
+                        .param("year", "2026"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("month is invalid"));
+    }
+
+    private static User user(Long id) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername("alice");
+        return user;
     }
 }

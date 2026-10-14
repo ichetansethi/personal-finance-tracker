@@ -23,9 +23,9 @@ import com.chetan.personalfinancetracker.mapper.TransactionMapper;
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.Transaction;
 import com.chetan.personalfinancetracker.model.User;
-import com.chetan.personalfinancetracker.repository.CategoryRepository;
 import com.chetan.personalfinancetracker.repository.TransactionRepository;
 import com.chetan.personalfinancetracker.repository.UserRepository;
+import com.chetan.personalfinancetracker.service.CategoryService;
 import com.chetan.personalfinancetracker.service.TransactionService;
 
 @RestController
@@ -42,24 +42,25 @@ public class TransactionController {
     private UserRepository userRepository;
 
     @Autowired
-    private CategoryRepository categoryRepository;
+    private CategoryService categoryService;
 
     @PostMapping
-    public Transaction addTransaction(@Valid @RequestBody TransactionDTO dto, Principal principal) {
+    public TransactionDTO addTransaction(@Valid @RequestBody TransactionDTO dto, Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        Category category = categoryRepository.findById(dto.getCategoryId())
-            .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        Category category = categoryService.findOwnedCategory(dto.getCategoryId(), user.getId());
 
         Transaction transaction = TransactionMapper.toEntity(dto, category, user);
-        return transactionRepository.save(transaction);
+        return TransactionMapper.toDTO(transactionRepository.save(transaction));
     }
 
     @GetMapping
-    public List<Transaction> getUserTransactions(Principal principal) {
+    public List<TransactionDTO> getUserTransactions(Principal principal) {
         User user = userRepository.findByUsername(principal.getName())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        return transactionRepository.findByUser(user);
+        return transactionRepository.findByUser(user).stream()
+            .map(TransactionMapper::toDTO)
+            .toList();
     }
 
     @GetMapping("/filter")
@@ -75,8 +76,11 @@ public class TransactionController {
     @GetMapping("/summary")
     public ResponseEntity<MonthlySummaryDTO> getMonthlySummary(
             @RequestParam int month,
-            @RequestParam int year) {
-        MonthlySummaryDTO summary = transactionService.getMonthlySummary(month, year);
+            @RequestParam int year,
+            Principal principal) {
+        User user = userRepository.findByUsername(principal.getName())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        MonthlySummaryDTO summary = transactionService.getMonthlySummary(user.getId(), month, year);
         return ResponseEntity.ok(summary);
     }
     

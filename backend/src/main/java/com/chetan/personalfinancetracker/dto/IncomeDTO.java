@@ -24,6 +24,7 @@ public class IncomeDTO {
     @NotNull(message = "Date is required")
     private LocalDate date;
 
+    @NotNull(message = "Category is required")
     private Long categoryId;
     private String categoryName;
 

@@ -51,6 +51,7 @@ class TransactionServiceTest {
         TransactionDTO dto = dto(new BigDecimal("42.00"), TransactionType.EXPENSE, LocalDate.of(2026, 1, 5), "Coffee", 3L, 8L);
         Category category = category(3L, "Food", 200.0, 2000.0);
         User user = user(8L, "alice");
+        category.setUser(user);
         when(categoryRepository.findById(3L)).thenReturn(Optional.of(category));
         when(userRepository.findById(8L)).thenReturn(Optional.of(user));
         when(transactionRepository.save(any())).thenAnswer(invocation -> {
@@ -90,6 +91,23 @@ class TransactionServiceTest {
                 dto(BigDecimal.TEN, TransactionType.EXPENSE, LocalDate.now(), "Coffee", 3L, 8L)))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("User not found");
+
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    void createRejectsACategoryOwnedBySomeoneElse() {
+        User alice = user(8L, "alice");
+        User bob = user(9L, "bob");
+        Category category = category(3L, "Food", null, null);
+        category.setUser(bob);
+        when(categoryRepository.findById(3L)).thenReturn(Optional.of(category));
+        when(userRepository.findById(8L)).thenReturn(Optional.of(alice));
+
+        assertThatThrownBy(() -> transactionService.createTransaction(
+                dto(BigDecimal.TEN, TransactionType.EXPENSE, LocalDate.now(), "Coffee", 3L, 8L)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Category not found");
 
         verify(transactionRepository, never()).save(any());
     }
@@ -163,12 +181,12 @@ class TransactionServiceTest {
 
     @Test
     void monthlySummaryTreatsMissingTotalsAsZero() {
-        when(transactionRepository.getTotalIncomeForMonth(1, 2026)).thenReturn(null);
-        when(transactionRepository.getTotalExpenseForMonth(1, 2026)).thenReturn(null);
-        when(transactionRepository.getCategoryWiseTotals(1, 2026)).thenReturn(List.of());
-        when(categoryRepository.findAll()).thenReturn(List.of());
+        when(transactionRepository.getTotalIncomeForMonth(4L, 1, 2026)).thenReturn(null);
+        when(transactionRepository.getTotalExpenseForMonth(4L, 1, 2026)).thenReturn(null);
+        when(transactionRepository.getCategoryWiseTotals(4L, 1, 2026)).thenReturn(List.of());
+        when(categoryRepository.findByUserId(4L)).thenReturn(List.of());
 
-        MonthlySummaryDTO summary = transactionService.getMonthlySummary(1, 2026);
+        MonthlySummaryDTO summary = transactionService.getMonthlySummary(4L, 1, 2026);
 
         assertThat(summary.getTotalIncome()).isZero();
         assertThat(summary.getTotalExpense()).isZero();
@@ -179,21 +197,21 @@ class TransactionServiceTest {
 
     @Test
     void monthlySummaryFlagsBudgetsThatAreStrictlyExceeded() {
-        when(transactionRepository.getTotalIncomeForMonth(3, 2026)).thenReturn(1000.0);
-        when(transactionRepository.getTotalExpenseForMonth(3, 2026)).thenReturn(400.0);
+        when(transactionRepository.getTotalIncomeForMonth(4L, 3, 2026)).thenReturn(1000.0);
+        when(transactionRepository.getTotalExpenseForMonth(4L, 3, 2026)).thenReturn(400.0);
 
         List<Object[]> rows = new ArrayList<>();
-        rows.add(new Object[] {"Food", new BigDecimal("250.50")});
-        rows.add(new Object[] {"Rent", 100});
-        rows.add(new Object[] {"Ghost", 15});
-        when(transactionRepository.getCategoryWiseTotals(3, 2026)).thenReturn(rows);
+        rows.add(new Object[] {1L, "Food", new BigDecimal("250.50")});
+        rows.add(new Object[] {2L, "Rent", 100});
+        rows.add(new Object[] {99L, "Ghost", 15});
+        when(transactionRepository.getCategoryWiseTotals(4L, 3, 2026)).thenReturn(rows);
 
         Category food = category(1L, "Food", 200.0, 250.50);
         Category rent = category(2L, "Rent", 100.0, null);
-        when(categoryRepository.findAll()).thenReturn(List.of(food, rent));
-        when(transactionRepository.getYearlySpentForCategory(1L, 2026)).thenReturn(null);
+        when(categoryRepository.findByUserId(4L)).thenReturn(List.of(food, rent));
+        when(transactionRepository.getYearlySpentForCategory(4L, 1L, 2026)).thenReturn(null);
 
-        MonthlySummaryDTO summary = transactionService.getMonthlySummary(3, 2026);
+        MonthlySummaryDTO summary = transactionService.getMonthlySummary(4L, 3, 2026);
 
         assertThat(summary.getTotalIncome()).isEqualTo(1000.0);
         assertThat(summary.getTotalExpense()).isEqualTo(400.0);
@@ -219,9 +237,9 @@ class TransactionServiceTest {
         Category savings = category(8L, "Savings", null, 500.0);
         Category unbudgeted = category(9L, "Gifts", null, null);
         when(categoryRepository.findByUserId(4L)).thenReturn(List.of(groceries, savings, unbudgeted));
-        when(transactionRepository.getMonthlySpentForCategory(7L, 3, 2026)).thenReturn(100.0);
-        when(transactionRepository.getYearlySpentForCategory(7L, 2026)).thenReturn(1000.01);
-        when(transactionRepository.getYearlySpentForCategory(8L, 2026)).thenReturn(null);
+        when(transactionRepository.getMonthlySpentForCategory(4L, 7L, 3, 2026)).thenReturn(100.0);
+        when(transactionRepository.getYearlySpentForCategory(4L, 7L, 2026)).thenReturn(1000.01);
+        when(transactionRepository.getYearlySpentForCategory(4L, 8L, 2026)).thenReturn(null);
 
         List<BudgetAlert> alerts = transactionService.getBudgetAlerts(4L, 3, 2026);
 
@@ -230,6 +248,48 @@ class TransactionServiceTest {
                         org.assertj.core.groups.Tuple.tuple("Groceries", "Monthly", false, 100.0),
                         org.assertj.core.groups.Tuple.tuple("Groceries", "Yearly", true, 1000.01),
                         org.assertj.core.groups.Tuple.tuple("Savings", "Yearly", false, 0.0));
+    }
+
+    @Test
+    void summaryDoesNotMergeCategoriesThatShareAName() {
+        Category groceries = category(1L, "Food", 50.0, null);
+        Category dining = category(2L, "Food", 10.0, 20.0);
+        when(categoryRepository.findByUserId(4L)).thenReturn(List.of(groceries, dining));
+        when(transactionRepository.getTotalIncomeForMonth(4L, 3, 2026)).thenReturn(0.0);
+        when(transactionRepository.getTotalExpenseForMonth(4L, 3, 2026)).thenReturn(70.0);
+        List<Object[]> rows = new ArrayList<>();
+        rows.add(new Object[] {1L, "Food", 40.0});
+        rows.add(new Object[] {2L, "Food", 30.0});
+        when(transactionRepository.getCategoryWiseTotals(4L, 3, 2026)).thenReturn(rows);
+        when(transactionRepository.getYearlySpentForCategory(4L, 2L, 2026)).thenReturn(30.0);
+
+        MonthlySummaryDTO summary = transactionService.getMonthlySummary(4L, 3, 2026);
+
+        assertThat(summary.getCategorySummary()).containsEntry("Food", 40.0).containsEntry("Food (#2)", 30.0);
+        assertThat(summary.getBudgetAlerts()).extracting(BudgetAlert::getCategory, BudgetAlert::getPeriod, BudgetAlert::isExceeded, BudgetAlert::getSpent)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("Food", "Monthly", false, 40.0),
+                        org.assertj.core.groups.Tuple.tuple("Food", "Monthly", true, 30.0),
+                        org.assertj.core.groups.Tuple.tuple("Food", "Yearly", true, 30.0));
+    }
+
+    @Test
+    void yearlySummaryUsesTheWholeYearAndOnlyYearlyBudgets() {
+        Category rent = category(5L, "Rent", 100.0, 1000.0);
+        when(categoryRepository.findByUserId(4L)).thenReturn(List.of(rent));
+        when(transactionRepository.getTotalIncomeForYear(4L, 2026)).thenReturn(5000.0);
+        when(transactionRepository.getTotalExpenseForYear(4L, 2026)).thenReturn(1200.0);
+        List<Object[]> yearRows = new ArrayList<>();
+        yearRows.add(new Object[] {5L, "Rent", 1200.0});
+        when(transactionRepository.getCategoryWiseTotalsForYear(4L, 2026)).thenReturn(yearRows);
+
+        MonthlySummaryDTO summary = transactionService.getYearlySummary(4L, 2026);
+
+        assertThat(summary.getTotalExpense()).isEqualTo(1200.0);
+        assertThat(summary.getNetBalance()).isEqualTo(3800.0);
+        assertThat(summary.getBudgetAlerts()).extracting(BudgetAlert::getPeriod, BudgetAlert::isExceeded, BudgetAlert::getSpent)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("Yearly", true, 1200.0));
+        verify(transactionRepository, never()).getTotalExpenseForMonth(any(), any(int.class), any(int.class));
     }
 
     @Test

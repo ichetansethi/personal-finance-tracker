@@ -76,8 +76,8 @@ public class OtpService {
     @Transactional
     public boolean verifyOtp(String username, String otpCode) {
         if (!otpEnabled) {
-            logger.info("OTP is disabled. Skipping OTP verification.");
-            return true; // If OTP is disabled, always return true
+            logger.info("OTP is disabled. Refusing OTP verification.");
+            return false;
         }
 
         // Find the OTP

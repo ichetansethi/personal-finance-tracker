@@ -1,5 +1,7 @@
 package com.chetan.personalfinancetracker.controller;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -23,9 +25,9 @@ import com.chetan.personalfinancetracker.security.JwtUtil;
 import com.chetan.personalfinancetracker.service.UserService;
 import com.chetan.personalfinancetracker.support.WebTestAuth;
 
-import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -59,7 +61,8 @@ class UserControllerTest {
     @Test
     void profileRequiresAToken() throws Exception {
         mockMvc.perform(get("/api/users/profile"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
@@ -76,14 +79,34 @@ class UserControllerTest {
 
         mockMvc.perform(get("/api/users/profile")
                         .header("Authorization", "bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
-    void malformedTokenIsNotTranslatedIntoAnHttpError() {
-        assertThatThrownBy(() -> mockMvc.perform(get("/api/users/profile")
-                        .header("Authorization", "Bearer not-a-token")))
-                .isInstanceOf(JwtException.class);
+    void malformedTokenIsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/profile")
+                        .header("Authorization", "Bearer not-a-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Unauthorized"))
+                .andExpect(jsonPath("$.path").value("/api/users/profile"));
+    }
+
+    @Test
+    void expiredTokenIsUnauthorized() throws Exception {
+        String expired = Jwts.builder()
+                .setSubject("alice")
+                .setIssuer("personal-finance-app")
+                .setIssuedAt(new Date(System.currentTimeMillis() - 172_800_000L))
+                .setExpiration(new Date(System.currentTimeMillis() - 86_400_000L))
+                .signWith(Keys.hmacShaKeyFor("0123456789abcdef0123456789abcdef".getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        mockMvc.perform(get("/api/users/profile")
+                        .header("Authorization", "Bearer " + expired))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test

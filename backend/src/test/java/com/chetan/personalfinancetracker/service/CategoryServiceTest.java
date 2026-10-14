@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.chetan.personalfinancetracker.TransactionType;
 import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.model.Category;
+import com.chetan.personalfinancetracker.model.User;
 import com.chetan.personalfinancetracker.repository.CategoryRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,11 +30,35 @@ class CategoryServiceTest {
     private CategoryService categoryService;
 
     @Test
-    void getAllCategoriesReturnsTheRepositoryContents() {
+    void getCategoriesForUserReturnsOnlyThatUsersRows() {
         Category rent = new Category("Rent", TransactionType.EXPENSE, null);
-        when(categoryRepository.findAll()).thenReturn(List.of(rent));
+        when(categoryRepository.findByUserId(4L)).thenReturn(List.of(rent));
 
-        assertThat(categoryService.getAllCategories()).containsExactly(rent);
+        assertThat(categoryService.getCategoriesForUser(4L)).containsExactly(rent);
+    }
+
+    @Test
+    void findOwnedCategoryRejectsAnotherUsersCategory() {
+        User bob = new User();
+        bob.setId(9L);
+        Category rent = new Category("Rent", TransactionType.EXPENSE, bob);
+        rent.setId(5L);
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(rent));
+
+        assertThatThrownBy(() -> categoryService.findOwnedCategory(5L, 4L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Category not found");
+    }
+
+    @Test
+    void findOwnedCategoryReturnsTheCallersCategory() {
+        User alice = new User();
+        alice.setId(4L);
+        Category rent = new Category("Rent", TransactionType.EXPENSE, alice);
+        rent.setId(5L);
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(rent));
+
+        assertThat(categoryService.findOwnedCategory(5L, 4L)).isSameAs(rent);
     }
 
     @Test
