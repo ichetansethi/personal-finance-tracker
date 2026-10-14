@@ -151,7 +151,8 @@
             const total = incomes.reduce((sum, inc) => sum + (inc.amount || 0), 0);
 
             tbody.innerHTML = incomes.map(income => {
-                const categoryName = escapeHtml(income.category) || 'N/A';
+                const rawCategory = income.categoryName || income.category || '';
+                const categoryName = rawCategory ? escapeHtml(rawCategory) : 'N/A';
                 return `
                     <tr>
                         <td>${formatDate(income.date)}</td>

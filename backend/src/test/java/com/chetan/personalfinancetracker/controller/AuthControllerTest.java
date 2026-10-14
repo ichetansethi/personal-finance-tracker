@@ -152,6 +152,17 @@ class AuthControllerTest {
     }
 
     @Test
+    void registerRejectsMalformedJson() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Malformed JSON request"));
+
+        verify(authService, never()).register(any());
+    }
+
+    @Test
     void verifyOtpReturnsTheIssuedToken() throws Exception {
         when(authService.verifyOtpAndGenerateToken("alice", "123456")).thenReturn("signed-token");
 
@@ -182,6 +193,8 @@ class AuthControllerTest {
         return Stream.of(
                 Arguments.of("{\"password\":\"secret1\",\"email\":\"alice@example.com\"}", "username: Username is required"),
                 Arguments.of("{\"username\":\"alice\",\"email\":\"alice@example.com\"}", "password: Password is required"),
-                Arguments.of("{\"username\":\"alice\",\"password\":\"secret1\",\"email\":\"not-an-email\"}", "email: Email must be valid"));
+                Arguments.of("{\"username\":\"alice\",\"password\":\"secret1\",\"email\":\"not-an-email\"}", "email: Email must be valid"),
+                Arguments.of("{\"username\":\"alice\",\"password\":\"secret1\"}", "email: Email is required"),
+                Arguments.of("{\"username\":\"alice\",\"password\":\"secret1\",\"email\":\" \"}", "email: Email is required"));
     }
 }

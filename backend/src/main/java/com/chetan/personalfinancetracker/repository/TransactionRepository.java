@@ -25,29 +25,41 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                             @Param("from") LocalDate from,
                             @Param("to") LocalDate to);
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.category.type = 'INCOME' AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
-    Double getTotalIncomeForMonth(@Param("month") int month, @Param("year") int year);
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.user.id = :userId AND t.category.type = 'INCOME' AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
+    Double getTotalIncomeForMonth(@Param("userId") Long userId, @Param("month") int month, @Param("year") int year);
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.category.type = 'EXPENSE' AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
-    Double getTotalExpenseForMonth(@Param("month") int month, @Param("year") int year);
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.user.id = :userId AND t.category.type = 'EXPENSE' AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
+    Double getTotalExpenseForMonth(@Param("userId") Long userId, @Param("month") int month, @Param("year") int year);
 
-    @Query("SELECT t.category.name, SUM(t.amount) FROM Transaction t " +
-        "WHERE MONTH(t.date) = :month AND YEAR(t.date) = :year " +
-        "GROUP BY t.category.name")
-    List<Object[]> getCategoryWiseTotals(@Param("month") int month, @Param("year") int year);
-    
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.user.id = :userId AND t.category.type = 'INCOME' AND YEAR(t.date) = :year")
+    Double getTotalIncomeForYear(@Param("userId") Long userId, @Param("year") int year);
+
+    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.user.id = :userId AND t.category.type = 'EXPENSE' AND YEAR(t.date) = :year")
+    Double getTotalExpenseForYear(@Param("userId") Long userId, @Param("year") int year);
+
+    @Query("SELECT t.category.id, t.category.name, SUM(t.amount) FROM Transaction t " +
+        "WHERE t.user.id = :userId AND MONTH(t.date) = :month AND YEAR(t.date) = :year " +
+        "GROUP BY t.category.id, t.category.name")
+    List<Object[]> getCategoryWiseTotals(@Param("userId") Long userId, @Param("month") int month, @Param("year") int year);
+
+    @Query("SELECT t.category.id, t.category.name, SUM(t.amount) FROM Transaction t " +
+        "WHERE t.user.id = :userId AND YEAR(t.date) = :year " +
+        "GROUP BY t.category.id, t.category.name")
+    List<Object[]> getCategoryWiseTotalsForYear(@Param("userId") Long userId, @Param("year") int year);
+
     @Query("SELECT SUM(t.amount) FROM Transaction t " +
-        "WHERE t.category.id = :categoryId " +
-        "AND MONTH(t.date) = :month " +
-        "AND YEAR(t.date) = :year")
-    Double getMonthlySpentForCategory(@Param("categoryId") Long categoryId,
+        "WHERE t.user.id = :userId AND t.category.id = :categoryId " +
+        "AND MONTH(t.date) = :month AND YEAR(t.date) = :year")
+    Double getMonthlySpentForCategory(@Param("userId") Long userId,
+                                    @Param("categoryId") Long categoryId,
                                     @Param("month") int month,
                                     @Param("year") int year);
 
     @Query("SELECT SUM(t.amount) FROM Transaction t " +
-        "WHERE t.category.id = :categoryId " +
+        "WHERE t.user.id = :userId AND t.category.id = :categoryId " +
         "AND YEAR(t.date) = :year")
-    Double getYearlySpentForCategory(@Param("categoryId") Long categoryId,
+    Double getYearlySpentForCategory(@Param("userId") Long userId,
+                                    @Param("categoryId") Long categoryId,
                                     @Param("year") int year);
 
 }

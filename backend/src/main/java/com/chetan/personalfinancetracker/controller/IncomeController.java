@@ -1,6 +1,7 @@
 package com.chetan.personalfinancetracker.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -42,23 +43,25 @@ public class IncomeController {
     private UserRepository userRepository;
 
     @GetMapping("/user")
-    public List<Income> getMyIncomes() {
+    public List<IncomeDTO> getMyIncomes() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        return incomeRepository.findByUserId(user.getId());
+        return incomeRepository.findByUserId(user.getId()).stream()
+            .map(IncomeMapper::toDTO)
+            .collect(Collectors.toList());
     }
 
     @PostMapping
     public ResponseEntity<IncomeDTO> createIncome(@Valid @RequestBody IncomeDTO dto) {
-        Category category = categoryService.findById(dto.getCategoryId());
-        Income income = IncomeMapper.toEntity(dto, category);
-
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Category category = categoryService.findOwnedCategory(dto.getCategoryId(), user.getId());
+        Income income = IncomeMapper.toEntity(dto, category);
         income.setUser(user);
 
         Income saved = incomeService.createIncome(income);

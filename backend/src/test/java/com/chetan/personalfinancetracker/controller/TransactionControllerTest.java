@@ -33,11 +33,11 @@ import com.chetan.personalfinancetracker.exception.ResourceNotFoundException;
 import com.chetan.personalfinancetracker.model.Category;
 import com.chetan.personalfinancetracker.model.Transaction;
 import com.chetan.personalfinancetracker.model.User;
-import com.chetan.personalfinancetracker.repository.CategoryRepository;
 import com.chetan.personalfinancetracker.repository.TransactionRepository;
 import com.chetan.personalfinancetracker.repository.UserRepository;
 import com.chetan.personalfinancetracker.security.JwtFilter;
 import com.chetan.personalfinancetracker.security.JwtUtil;
+import com.chetan.personalfinancetracker.service.CategoryService;
 import com.chetan.personalfinancetracker.service.TransactionService;
 import com.chetan.personalfinancetracker.support.WebTestAuth;
 
@@ -47,6 +47,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -73,7 +74,7 @@ class TransactionControllerTest {
     private UserRepository userRepository;
 
     @MockitoBean
-    private CategoryRepository categoryRepository;
+    private CategoryService categoryService;
 
     @MockitoBean
     private UserDetailsService userDetailsService;
@@ -86,7 +87,8 @@ class TransactionControllerTest {
     @Test
     void anonymousCallersCannotListTransactions() throws Exception {
         mockMvc.perform(get("/api/transactions"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     @Test
@@ -94,7 +96,7 @@ class TransactionControllerTest {
         User alice = user(7L, "alice");
         Category food = category(3L, "Food");
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
-        when(categoryRepository.findById(3L)).thenReturn(Optional.of(food));
+        when(categoryService.findOwnedCategory(3L, 7L)).thenReturn(food);
         when(transactionRepository.save(any())).thenAnswer(invocation -> {
             Transaction transaction = invocation.getArgument(0);
             transaction.setId(99L);
@@ -110,7 +112,10 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(99))
                 .andExpect(jsonPath("$.description").value("Lunch"))
-                .andExpect(jsonPath("$.user").doesNotExist());
+                .andExpect(jsonPath("$.categoryName").value("Food"))
+                .andExpect(jsonPath("$.userId").value(7))
+                .andExpect(jsonPath("$.user").doesNotExist())
+                .andExpect(jsonPath("$.password").doesNotExist());
 
         org.mockito.ArgumentCaptor<Transaction> saved = org.mockito.ArgumentCaptor.forClass(Transaction.class);
         verify(transactionRepository).save(saved.capture());
@@ -134,7 +139,8 @@ class TransactionControllerTest {
     @Test
     void createReportsAnUnknownCategory() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(7L, "alice")));
-        when(categoryRepository.findById(3L)).thenReturn(Optional.empty());
+        when(categoryService.findOwnedCategory(3L, 7L))
+                .thenThrow(new ResourceNotFoundException("Category not found"));
 
         mockMvc.perform(post("/api/transactions")
                         .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice"))
@@ -156,6 +162,9 @@ class TransactionControllerTest {
         lunch.setAmount(new BigDecimal("10.00"));
         lunch.setDate(LocalDate.of(2026, 3, 1));
         lunch.setType(TransactionType.EXPENSE);
+        lunch.setCategory(category(3L, "Food"));
+        alice.setPassword("$2a$hash");
+        lunch.setUser(alice);
         when(transactionRepository.findByUser(alice)).thenReturn(List.of(lunch));
 
         mockMvc.perform(get("/api/transactions")
@@ -163,7 +172,11 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].description").value("Lunch"))
-                .andExpect(jsonPath("$[0].user").doesNotExist());
+                .andExpect(jsonPath("$[0].categoryName").value("Food"))
+                .andExpect(jsonPath("$[0].userId").value(7))
+                .andExpect(jsonPath("$[0].user").doesNotExist())
+                .andExpect(jsonPath("$[0].password").doesNotExist())
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("$2a$hash"))));
 
         verify(transactionRepository).findByUser(alice);
     }
@@ -192,7 +205,8 @@ class TransactionControllerTest {
 
     @Test
     void summaryReturnsIncomeExpenseAndNetBalance() throws Exception {
-        when(transactionService.getMonthlySummary(3, 2026))
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(7L, "alice")));
+        when(transactionService.getMonthlySummary(7L, 3, 2026))
                 .thenReturn(new MonthlySummaryDTO(1000, 400, Map.of("Food", 400.0), List.of()));
 
         mockMvc.perform(get("/api/transactions/summary")

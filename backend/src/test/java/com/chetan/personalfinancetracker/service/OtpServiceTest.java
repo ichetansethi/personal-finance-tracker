@@ -104,12 +104,10 @@ class OtpServiceTest {
     }
 
     @Test
-    void verifyAcceptsAnyCodeWhenOtpIsDisabled() {
-        // Current behaviour: a disabled OTP check returns true without looking at the code.
-        // AuthService.verifyOtpAndGenerateToken will then issue a JWT. See the PR notes.
+    void verifyRejectsEveryCodeWhenOtpIsDisabled() {
         ReflectionTestUtils.setField(otpService, "otpEnabled", false);
 
-        assertThat(otpService.verifyOtp("alice", "not-a-real-code")).isTrue();
+        assertThat(otpService.verifyOtp("alice", "not-a-real-code")).isFalse();
 
         verifyNoInteractions(otpRepository);
     }

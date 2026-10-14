@@ -30,8 +30,10 @@ public class CategoryController {
     private CategoryService categoryService;
 
     @GetMapping
-    public ResponseEntity<List<CategoryDTO>> getAllCategories() {
-        List<CategoryDTO> categories = categoryService.getAllCategories()
+    public ResponseEntity<List<CategoryDTO>> getAllCategories(Principal principal) {
+        User user = userRepository.findByUsername(principal.getName())
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        List<CategoryDTO> categories = categoryService.getCategoriesForUser(user.getId())
                 .stream()
                 .map(CategoryMapper::toDTO)
                 .collect(Collectors.toList());

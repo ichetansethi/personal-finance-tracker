@@ -58,7 +58,8 @@ class FinanceTrackerFlowIntegrationTest {
     @Test
     void anonymousAndInvalidTransactionInputAreRejected() throws Exception {
         mockMvc.perform(get("/api/transactions"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
 
         long categoryId = createCategory(aliceToken, "Rent", "EXPENSE", 100, 10000);
 
@@ -128,6 +129,172 @@ class FinanceTrackerFlowIntegrationTest {
         assertThat(((Number) bobMonthly.get("spent")).doubleValue()).isEqualTo(0.0);
         assertThat(bobMonthly.get("exceeded")).isEqualTo(false);
         assertThat(bobAlerts).extracting(alert -> alert.get("category")).containsOnly("Food");
+    }
+
+    @Test
+    void categoriesSummariesAndWritesStayWithTheOwner() throws Exception {
+        long aliceRent = createCategory(aliceToken, "Rent", "EXPENSE", 100, 10000);
+        long bobFood = createCategory(bobToken, "Food", "EXPENSE", 40, 400);
+        createTransaction(aliceToken, aliceRent, "150.00", "March rent");
+        createTransaction(bobToken, bobFood, "10.00", "Lunch");
+
+        mockMvc.perform(get("/api/categories")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Rent"));
+
+        mockMvc.perform(get("/api/categories")
+                        .header("Authorization", "Bearer " + bobToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Food"));
+
+        mockMvc.perform(get("/api/summary/monthly")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .param("month", "3")
+                        .param("year", "2026"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalExpense").value(150.0))
+                .andExpect(jsonPath("$.categorySummary.Rent").value(150.0))
+                .andExpect(jsonPath("$.categorySummary.Food").doesNotExist());
+
+        mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"amount":20,"type":"EXPENSE","date":"2026-04-02","description":"April rent","categoryId":%d}
+                                """.formatted(aliceRent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryName").value("Rent"))
+                .andExpect(jsonPath("$.user").doesNotExist())
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        mockMvc.perform(get("/api/summary/monthly")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .param("month", "3")
+                        .param("year", "2026"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalExpense").value(150.0));
+
+        mockMvc.perform(get("/api/summary/yearly")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .param("year", "2026"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalExpense").value(170.0))
+                .andExpect(jsonPath("$.categorySummary.Rent").value(170.0));
+
+        mockMvc.perform(post("/api/transactions")
+                        .header("Authorization", "Bearer " + bobToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"amount":5,"type":"EXPENSE","date":"2026-03-15","description":"Not mine","categoryId":%d}
+                                """.formatted(aliceRent)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Category not found"));
+
+        mockMvc.perform(post("/api/expenses")
+                        .header("Authorization", "Bearer " + bobToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"description":"Not mine","amount":5,"date":"2026-03-15","categoryId":%d}
+                                """.formatted(aliceRent)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Category not found"));
+
+        mockMvc.perform(post("/api/incomes")
+                        .header("Authorization", "Bearer " + bobToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"source":"Side gig","amount":5,"date":"2026-03-15","categoryId":%d}
+                                """.formatted(aliceRent)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Category not found"));
+
+        mockMvc.perform(post("/api/expenses")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"description":"March rent","amount":15,"date":"2026-03-16","categoryId":%d}
+                                """.formatted(aliceRent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryName").value("Rent"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        mockMvc.perform(get("/api/expenses/my")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].categoryName").value("Rent"))
+                .andExpect(jsonPath("$[0].user").doesNotExist())
+                .andExpect(jsonPath("$[0].password").doesNotExist());
+
+        long alicePay = createCategory(aliceToken, "Payroll", "INCOME", 0, 0);
+        mockMvc.perform(post("/api/incomes")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"source":"Salary","amount":2000,"date":"2026-03-01","categoryId":%d}
+                                """.formatted(alicePay)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryName").value("Payroll"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        mockMvc.perform(get("/api/incomes/user")
+                        .header("Authorization", "Bearer " + aliceToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].categoryName").value("Payroll"))
+                .andExpect(jsonPath("$[0].user").doesNotExist())
+                .andExpect(jsonPath("$[0].password").doesNotExist());
+    }
+
+    @Test
+    void clientMistakesAndDisabledOtpReturn4xx() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"cara","password":"password1"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("email: Email is required"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson("cara", "password1", "alice@example.com")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Email already exists"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Malformed JSON request"));
+
+        mockMvc.perform(post("/api/auth/verify-otp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"alice","otp":"123456"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("OTP verification is disabled"))
+                .andExpect(jsonPath("$.token").doesNotExist());
+
+        mockMvc.perform(get("/api/summary/monthly")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .param("year", "2026"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("month is required"));
+
+        mockMvc.perform(get("/api/summary/monthly")
+                        .header("Authorization", "Bearer " + aliceToken)
+                        .param("month", "abc")
+                        .param("year", "2026"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("month is invalid"));
+
+        mockMvc.perform(get("/api/transactions")
+                        .header("Authorization", "Bearer not-a-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Unauthorized"));
     }
 
     private void register(String username, String password, String email) throws Exception {

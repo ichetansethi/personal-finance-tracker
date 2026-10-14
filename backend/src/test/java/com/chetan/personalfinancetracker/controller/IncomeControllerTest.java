@@ -39,6 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -78,7 +79,7 @@ class IncomeControllerTest {
     @Test
     void anonymousCallersCannotReadIncome() throws Exception {
         mockMvc.perform(get("/api/incomes/user"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -86,7 +87,7 @@ class IncomeControllerTest {
         User alice = user(7L, "alice");
         Category payroll = new Category("Payroll", TransactionType.INCOME, alice);
         payroll.setId(2L);
-        when(categoryService.findById(2L)).thenReturn(payroll);
+        when(categoryService.findOwnedCategory(2L, 7L)).thenReturn(payroll);
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
         when(incomeService.createIncome(any())).thenAnswer(invocation -> {
             Income income = invocation.getArgument(0);
@@ -103,7 +104,9 @@ class IncomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(8))
                 .andExpect(jsonPath("$.source").value("Salary"))
-                .andExpect(jsonPath("$.categoryName").value("Payroll"));
+                .andExpect(jsonPath("$.categoryName").value("Payroll"))
+                .andExpect(jsonPath("$.user").doesNotExist())
+                .andExpect(jsonPath("$.password").doesNotExist());
 
         org.mockito.ArgumentCaptor<Income> saved = org.mockito.ArgumentCaptor.forClass(Income.class);
         verify(incomeService).createIncome(saved.capture());
@@ -134,6 +137,7 @@ class IncomeControllerTest {
         salary.setAmount(new BigDecimal("2000"));
         salary.setDate(LocalDate.of(2026, 3, 1));
         salary.setCategory("Payroll");
+        alice.setPassword("$2a$hash");
         salary.setUser(alice);
         when(incomeRepository.findByUserId(7L)).thenReturn(List.of(salary));
 
@@ -141,7 +145,11 @@ class IncomeControllerTest {
                         .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].source").value("Salary"))
-                .andExpect(jsonPath("$[0].category").value("Payroll"));
+                .andExpect(jsonPath("$[0].categoryName").value("Payroll"))
+                .andExpect(jsonPath("$[0].category").doesNotExist())
+                .andExpect(jsonPath("$[0].user").doesNotExist())
+                .andExpect(jsonPath("$[0].password").doesNotExist())
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("$2a$hash"))));
 
         verify(incomeRepository).findByUserId(7L);
     }

@@ -40,6 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -79,7 +80,7 @@ class ExpenseControllerTest {
     @Test
     void anonymousCallersCannotReadExpenses() throws Exception {
         mockMvc.perform(get("/api/expenses/my"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -87,7 +88,7 @@ class ExpenseControllerTest {
         User alice = user(7L, "alice");
         Category food = category(3L, "Food");
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
-        when(categoryService.findById(3L)).thenReturn(food);
+        when(categoryService.findOwnedCategory(3L, 7L)).thenReturn(food);
         when(expenseService.createExpense(any())).thenAnswer(invocation -> {
             Expense expense = invocation.getArgument(0);
             expense.setId(11L);
@@ -103,7 +104,9 @@ class ExpenseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(11))
                 .andExpect(jsonPath("$.description").value("Lunch"))
-                .andExpect(jsonPath("$.categoryName").value("Food"));
+                .andExpect(jsonPath("$.categoryName").value("Food"))
+                .andExpect(jsonPath("$.user").doesNotExist())
+                .andExpect(jsonPath("$.password").doesNotExist());
 
         org.mockito.ArgumentCaptor<Expense> saved = org.mockito.ArgumentCaptor.forClass(Expense.class);
         verify(expenseService).createExpense(saved.capture());
@@ -127,7 +130,8 @@ class ExpenseControllerTest {
     @Test
     void createReportsAnUnknownCategory() throws Exception {
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user(7L, "alice")));
-        when(categoryService.findById(3L)).thenThrow(new ResourceNotFoundException("Category not found with ID: 3"));
+        when(categoryService.findOwnedCategory(3L, 7L))
+                .thenThrow(new ResourceNotFoundException("Category not found"));
 
         mockMvc.perform(post("/api/expenses")
                         .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice"))
@@ -136,7 +140,7 @@ class ExpenseControllerTest {
                                 {"description":"Lunch","amount":12.50,"date":"2026-03-02","categoryId":3}
                                 """))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Category not found with ID: 3"));
+                .andExpect(jsonPath("$.message").value("Category not found"));
     }
 
     @Test
@@ -150,6 +154,7 @@ class ExpenseControllerTest {
         lunch.setAmount(new BigDecimal("12.50"));
         lunch.setDate(LocalDate.of(2026, 3, 2));
         lunch.setCategory(food);
+        alice.setPassword("$2a$hash");
         lunch.setUser(alice);
         when(expenseRepository.findByUserId(7L)).thenReturn(List.of(lunch));
 
@@ -157,7 +162,11 @@ class ExpenseControllerTest {
                         .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].description").value("Lunch"))
-                .andExpect(jsonPath("$[0].category.name").value("Food"));
+                .andExpect(jsonPath("$[0].categoryName").value("Food"))
+                .andExpect(jsonPath("$[0].category").doesNotExist())
+                .andExpect(jsonPath("$[0].user").doesNotExist())
+                .andExpect(jsonPath("$[0].password").doesNotExist())
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("$2a$hash"))));
 
         verify(expenseRepository).findByUserId(7L);
     }

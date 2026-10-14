@@ -33,7 +33,7 @@ public class SummaryController {
             @RequestParam int month,
             @RequestParam int year) {
 
-        MonthlySummaryDTO summary = transactionService.getMonthlySummary(month, year);
+        MonthlySummaryDTO summary = transactionService.getMonthlySummary(currentUser().getId(), month, year);
         return ResponseEntity.ok(summary);
     }
 
@@ -41,7 +41,7 @@ public class SummaryController {
     public ResponseEntity<MonthlySummaryDTO> getYearlySummary(
             @RequestParam int year) {
 
-        MonthlySummaryDTO summary = transactionService.getMonthlySummary(0, year);
+        MonthlySummaryDTO summary = transactionService.getYearlySummary(currentUser().getId(), year);
         return ResponseEntity.ok(summary);
     }
 
@@ -50,12 +50,14 @@ public class SummaryController {
             @RequestParam int month,
             @RequestParam int year) {
 
+        List<BudgetAlert> alerts = transactionService.getBudgetAlerts(currentUser().getId(), month, year);
+        return ResponseEntity.ok(alerts);
+    }
+
+    private User currentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
-        User user = userRepository.findByUsername(username)
+        return userRepository.findByUsername(username)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        List<BudgetAlert> alerts = transactionService.getBudgetAlerts(user.getId(), month, year);
-        return ResponseEntity.ok(alerts);
     }
 }

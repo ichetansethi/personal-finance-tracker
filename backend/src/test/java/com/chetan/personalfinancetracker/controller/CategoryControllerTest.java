@@ -71,7 +71,7 @@ class CategoryControllerTest {
                         .content("""
                                 {"name":"Rent","type":"EXPENSE","monthlyBudget":100,"yearlyBudget":1200}
                                 """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -147,17 +147,25 @@ class CategoryControllerTest {
     }
 
     @Test
-    void listReturnsMappedCategoriesForAnAuthenticatedCaller() throws Exception {
-        Category rent = new Category("Rent", TransactionType.EXPENSE, null);
+    void listReturnsOnlyTheAuthenticatedUsersCategories() throws Exception {
+        User alice = new User();
+        alice.setId(4L);
+        alice.setUsername("alice");
+        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(alice));
+        Category rent = new Category("Rent", TransactionType.EXPENSE, alice);
         rent.setId(5L);
         rent.setMonthlyBudget(100.0);
-        when(categoryService.getAllCategories()).thenReturn(List.of(rent));
+        when(categoryService.getCategoriesForUser(4L)).thenReturn(List.of(rent));
 
         mockMvc.perform(get("/api/categories")
                         .header("Authorization", WebTestAuth.bearer(jwtUtil, "alice")))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].name").value("Rent"))
                 .andExpect(jsonPath("$[0].type").value("EXPENSE"))
-                .andExpect(jsonPath("$[0].monthlyBudget").value(100.0));
+                .andExpect(jsonPath("$[0].monthlyBudget").value(100.0))
+                .andExpect(jsonPath("$[0].password").doesNotExist());
+
+        verify(categoryService).getCategoriesForUser(4L);
     }
 }

@@ -43,6 +43,10 @@ public class TransactionService {
         User user = userRepository.findById(dto.getUserId())
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        if (category.getUser() == null || !user.getId().equals(category.getUser().getId())) {
+            throw new ResourceNotFoundException("Category not found");
+        }
+
         Transaction transaction = TransactionMapper.toEntity(dto, category, user);
         Transaction saved = transactionRepository.save(transaction);
 
@@ -86,71 +90,84 @@ public class TransactionService {
         return TransactionMapper.toDTO(updated);
     }
 
-    // Monthly summary including totals, category-wise totals and budget alerts
-    public MonthlySummaryDTO getMonthlySummary(int month, int year) {
-        Double income  = Optional.ofNullable(transactionRepository.getTotalIncomeForMonth(month, year)).orElse(0.0);
-        Double expense = Optional.ofNullable(transactionRepository.getTotalExpenseForMonth(month, year)).orElse(0.0);
+    // Monthly summary for one user, including totals, per-category totals and budget alerts.
+    public MonthlySummaryDTO getMonthlySummary(Long userId, int month, int year) {
+        double income = zero(transactionRepository.getTotalIncomeForMonth(userId, month, year));
+        double expense = zero(transactionRepository.getTotalExpenseForMonth(userId, month, year));
+        return summarize(userId, income, expense, transactionRepository.getCategoryWiseTotals(userId, month, year), true, year);
+    }
 
-        List<Object[]> categoryData = transactionRepository.getCategoryWiseTotals(month, year);
+    // Yearly summary for one user. Totals cover the whole year and alerts use yearly budgets.
+    public MonthlySummaryDTO getYearlySummary(Long userId, int year) {
+        double income = zero(transactionRepository.getTotalIncomeForYear(userId, year));
+        double expense = zero(transactionRepository.getTotalExpenseForYear(userId, year));
+        return summarize(userId, income, expense, transactionRepository.getCategoryWiseTotalsForYear(userId, year), false, year);
+    }
+
+    private MonthlySummaryDTO summarize(Long userId, double income, double expense, List<Object[]> rows,
+                                        boolean includeMonthlyAlerts, int year) {
+        Map<Long, Category> categoriesById = new HashMap<>();
+        for (Category category : categoryRepository.findByUserId(userId)) {
+            categoriesById.put(category.getId(), category);
+        }
+
         Map<String, Double> categorySummary = new HashMap<>();
         List<BudgetAlert> alerts = new ArrayList<>();
 
-        // Build lookup map: category name -> Category entity
-        List<Category> allCategories = categoryRepository.findAll();
-        Map<String, Category> categoryMap = new HashMap<>();
-        for (Category cat : allCategories) {
-            categoryMap.put(cat.getName(), cat);
-        }
+        for (Object[] row : rows) {
+            Long categoryId = ((Number) row[0]).longValue();
+            String categoryName = (String) row[1];
+            double amount = toDouble(row[2]);
+            categorySummary.put(summaryKey(categorySummary, categoryName, categoryId), amount);
 
-        for (Object[] row : categoryData) {
-            String categoryName = (String) row[0];
-
-            // row[1] might be BigDecimal or some Number depending on JPA provider
-            Double amount;
-            if (row[1] instanceof BigDecimal bigDecimal) {
-                amount = bigDecimal.doubleValue();
-            } else {
-                amount = ((Number) row[1]).doubleValue();
-            }
-
-            categorySummary.put(categoryName, amount);
-
-            Category category = categoryMap.get(categoryName);
+            Category category = categoriesById.get(categoryId);
             if (category == null) {
-                // No matching Category entity (shouldn't normally happen), skip alerts for this one
                 continue;
             }
 
-            // Monthly budget alert
-            if (category.getMonthlyBudget() != null) {
-                boolean exceededMonthly = amount > category.getMonthlyBudget();
+            if (includeMonthlyAlerts && category.getMonthlyBudget() != null) {
                 alerts.add(new BudgetAlert(
                     categoryName,
                     amount,
                     category.getMonthlyBudget(),
-                    exceededMonthly,
+                    amount > category.getMonthlyBudget(),
                     "Monthly"
                 ));
             }
 
-            // Yearly budget alert
             if (category.getYearlyBudget() != null) {
-                Double yearlySpent = Optional.ofNullable(
-                        transactionRepository.getYearlySpentForCategory(category.getId(), year)
-                ).orElse(0.0);
-
-                boolean exceededYearly = yearlySpent > category.getYearlyBudget();
+                double yearlySpent = includeMonthlyAlerts
+                    ? zero(transactionRepository.getYearlySpentForCategory(userId, category.getId(), year))
+                    : amount;
                 alerts.add(new BudgetAlert(
                     categoryName,
                     yearlySpent,
                     category.getYearlyBudget(),
-                    exceededYearly,
+                    yearlySpent > category.getYearlyBudget(),
                     "Yearly"
                 ));
             }
         }
 
         return new MonthlySummaryDTO(income, expense, categorySummary, alerts);
+    }
+
+    private static double zero(Double value) {
+        return value == null ? 0.0 : value;
+    }
+
+    private static double toDouble(Object value) {
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal.doubleValue();
+        }
+        return ((Number) value).doubleValue();
+    }
+
+    private static String summaryKey(Map<String, Double> summary, String name, Long id) {
+        if (!summary.containsKey(name)) {
+            return name;
+        }
+        return name + " (#" + id + ")";
     }
 
     // Budget alerts for a specific user, month, and year
@@ -161,11 +178,11 @@ public class TransactionService {
         for (Category category : categories) {
 
             Double spentMonth = Optional.ofNullable(
-                transactionRepository.getMonthlySpentForCategory(category.getId(), month, year)
+                transactionRepository.getMonthlySpentForCategory(userId, category.getId(), month, year)
             ).orElse(0.0);
 
             Double spentYear = Optional.ofNullable(
-                transactionRepository.getYearlySpentForCategory(category.getId(), year)
+                transactionRepository.getYearlySpentForCategory(userId, category.getId(), year)
             ).orElse(0.0);
 
             if (category.getMonthlyBudget() != null) {
