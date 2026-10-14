@@ -1,11 +1,14 @@
 package com.chetan.personalfinancetracker.exception;
 
+import java.util.Comparator;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -68,13 +71,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        // Hibernate Validator stores violations in a HashSet whose hash includes
+        // System.identityHashCode, so iteration order changes between runs and JDKs.
         String message = ex.getBindingResult().getFieldErrors().stream()
+                .min(VALIDATION_ERROR_ORDER)
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
-                .findFirst()
                 .orElse("Validation failed");
 
         ApiError error = new ApiError(HttpStatus.BAD_REQUEST.value(), message, request.getRequestURI());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    private static final Comparator<FieldError> VALIDATION_ERROR_ORDER = Comparator
+            .comparingInt(GlobalExceptionHandler::presenceRank)
+            .thenComparing(FieldError::getField, Comparator.nullsLast(String::compareTo))
+            .thenComparing(err -> err.getDefaultMessage() == null ? "" : err.getDefaultMessage());
+
+    private static int presenceRank(FieldError error) {
+        String code = error.getCode();
+        if ("NotBlank".equals(code) || "NotNull".equals(code) || "NotEmpty".equals(code)) {
+            return 0;
+        }
+        return 1;
     }
 
     @ExceptionHandler(Exception.class)

@@ -9,6 +9,9 @@ import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -94,6 +97,32 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void blankEmailPrefersTheRequiredMessageRegardlessOfViolationOrder() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/register");
+        FieldError format = fieldError("Email", "Email must be valid");
+        FieldError required = fieldError("NotBlank", "Email is required");
+
+        ResponseEntity<ApiError> formatFirst = handler.handleValidationErrors(
+                validationException(format, required), request);
+        ResponseEntity<ApiError> requiredFirst = handler.handleValidationErrors(
+                validationException(required, format), request);
+
+        assertThat(formatFirst.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(formatFirst.getBody().getMessage()).isEqualTo("email: Email is required");
+        assertThat(requiredFirst.getBody().getMessage()).isEqualTo("email: Email is required");
+    }
+
+    @Test
+    void invalidEmailFormatIsReportedWhenTheValueIsPresent() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/register");
+
+        ResponseEntity<ApiError> response = handler.handleValidationErrors(
+                validationException(fieldError("Email", "Email must be valid")), request);
+
+        assertThat(response.getBody().getMessage()).isEqualTo("email: Email must be valid");
+    }
+
+    @Test
     void unexpectedExceptionsAreHiddenBehindAGeneric500() {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/summary/monthly");
 
@@ -102,5 +131,17 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody().getMessage()).isEqualTo("An unexpected error occurred");
         assertThat(response.getBody().getMessage()).doesNotContain("db down");
+    }
+
+    private static FieldError fieldError(String code, String message) {
+        return new FieldError("authRequest", "email", " ", false, new String[] {code}, null, message);
+    }
+
+    private static MethodArgumentNotValidException validationException(FieldError... errors) {
+        BeanPropertyBindingResult result = new BeanPropertyBindingResult(new Object(), "authRequest");
+        for (FieldError error : errors) {
+            result.addError(error);
+        }
+        return new MethodArgumentNotValidException(null, result);
     }
 }
